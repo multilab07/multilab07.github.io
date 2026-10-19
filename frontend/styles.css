@@ -1,3 +1,4 @@
+:root {
   --primary: #0284c7;
   --primary-dark: #0369a1;
   --primary-light: #e0f2fe;
@@ -81,6 +82,51 @@ body::after {
   0% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(60px, 40px) scale(1.12); }
   100% { transform: translate(-30px, 80px) scale(0.95); }
+}
+
+#particleCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+}
+
+.demo-accounts {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px dashed rgba(2, 132, 199, 0.35);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.demo-pill {
+  background: white;
+  border: 1px solid rgba(2, 132, 199, 0.3);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.demo-pill:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 /* ---------------- HEADER ---------------- */

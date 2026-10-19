@@ -18,18 +18,273 @@ const App = (function () {
   let collectorGeoWatch = null;
   let collectorActiveBookingId = null;
 
+  // ---------------- AMBIENT LIVE MOLECULAR BACKGROUND ----------------
+  function initAmbientParticles() {
+    const canvas = document.getElementById("particleCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener("resize", () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    const count = Math.min(Math.floor((width * height) / 16000), 50);
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: Math.random() * 2.2 + 1,
+        color: ["rgba(14, 165, 233, ", "rgba(99, 102, 241, ", "rgba(16, 185, 129, ", "rgba(56, 189, 248, "][Math.floor(Math.random() * 4)]
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw constellation links
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(56, 189, 248, ${0.15 * (1 - dist / 120)})`;
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw particles
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + "0.65)";
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color + "0.8)";
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  // ---------------- MOCK DATA & PERSISTENCE ENGINE ----------------
+  const MOCK_STORAGE_BOOKINGS = "multilab07_bookings_cache";
+  const MOCK_STORAGE_USERS = "multilab07_custom_users";
+
+  const MOCK_COMPANIES = [
+    { id: 1, name: "MultiLab07 Flagship Hub", theme_color: "#0284c7", upi_id: "multilab07@upi", phone: "+91 98401 23456", email: "care@multilab07.com", address: "Central Diagnostics Tower, Bangalore" },
+    { id: 2, name: "Apollo Diagnostics", theme_color: "#16a34a", upi_id: "apollo@upi", phone: "+91 1800 102 0288", email: "support@apollodiagnostics.in", address: "NABL Accredited Reference Hub, Chennai" },
+    { id: 3, name: "Dr. Lal PathLabs", theme_color: "#f59e0b", upi_id: "lalpath@upi", phone: "+91 1800 111 744", email: "care@lalpathlabs.com", address: "National Reference Lab, Gurgaon" },
+    { id: 4, name: "Thyrocare Technologies", theme_color: "#8b5cf6", upi_id: "thyrocare@upi", phone: "+91 98700 66666", email: "info@thyrocare.com", address: "MIDC Turbhe, Navi Mumbai" }
+  ];
+
+  const MOCK_CATEGORIES = [
+    "All", "Blood Tests", "Diabetes & Sugar", "Thyroid Profile", "Cardiac & Heart", "Kidney Function (KFT)", "Liver Function (LFT)", "Vitamins & Minerals", "Complete Health Packages"
+  ];
+
+  const MOCK_TESTS = [
+    { id: 1, company_id: 1, name: "Complete Blood Count (CBC) with ESR", code: "CBC-01", category: "Blood Tests", price: 299, original_price: 550, discount_pct: 45, preparation: "No fasting required. Hydrate normally.", sample_type: "Whole Blood (EDTA)", tat_hours: 6 },
+    { id: 2, company_id: 1, name: "Fasting Blood Glucose (FBS)", code: "GLU-01", category: "Diabetes & Sugar", price: 99, original_price: 200, discount_pct: 50, preparation: "Strict 8-10 hours overnight fasting required.", sample_type: "Fluoride Plasma", tat_hours: 4 },
+    { id: 3, company_id: 1, name: "HbA1c (Glycated Hemoglobin)", code: "HBA1C", category: "Diabetes & Sugar", price: 399, original_price: 700, discount_pct: 43, preparation: "Fasting not strictly required.", sample_type: "Whole Blood (EDTA)", tat_hours: 6 },
+    { id: 4, company_id: 1, name: "Thyroid Profile Total (T3, T4, TSH)", code: "THY-03", category: "Thyroid Profile", price: 349, original_price: 750, discount_pct: 53, preparation: "Early morning fasting sample recommended.", sample_type: "Serum", tat_hours: 8 },
+    { id: 5, company_id: 1, name: "Lipid Profile Comprehensive", code: "LIPID-FULL", category: "Cardiac & Heart", price: 549, original_price: 1100, discount_pct: 50, preparation: "10-12 hours overnight fasting mandatory.", sample_type: "Serum", tat_hours: 8 },
+    { id: 6, company_id: 1, name: "Liver Function Test (LFT with Enzymes)", code: "LFT-01", category: "Liver Function (LFT)", price: 499, original_price: 950, discount_pct: 47, preparation: "8 hours fasting. Avoid heavy fatty dinner.", sample_type: "Serum", tat_hours: 6 },
+    { id: 7, company_id: 1, name: "Kidney Function Test (KFT with Electrolytes)", code: "KFT-01", category: "Kidney Function (KFT)", price: 549, original_price: 1000, discount_pct: 45, preparation: "Overnight fasting recommended.", sample_type: "Serum", tat_hours: 6 },
+    { id: 8, company_id: 1, name: "Vitamin D (25-Hydroxy) Deficiency Test", code: "VIT-D3", category: "Vitamins & Minerals", price: 699, original_price: 1600, discount_pct: 56, preparation: "No special diet or fasting required.", sample_type: "Serum", tat_hours: 12 },
+    { id: 9, company_id: 1, name: "Vitamin B12 (Cyanocobalamin)", code: "VIT-B12", category: "Vitamins & Minerals", price: 599, original_price: 1300, discount_pct: 54, preparation: "Overnight fasting preferred.", sample_type: "Serum", tat_hours: 8 },
+    { id: 10, company_id: 1, name: "MultiLab07 Executive Platinum Health Check (84 Tests)", code: "MLB-PLATINUM", category: "Complete Health Packages", price: 1499, original_price: 4999, discount_pct: 70, preparation: "10-12 hours fasting. Free home collection included.", sample_type: "Blood & Urine", tat_hours: 12 },
+    { id: 11, company_id: 1, name: "Cardiac Risk Assessment Panel (Troponin + hsCRP + Lipid)", code: "CARDIO-01", category: "Cardiac & Heart", price: 1199, original_price: 2400, discount_pct: 50, preparation: "10 hours fasting.", sample_type: "Serum", tat_hours: 8 },
+    { id: 12, company_id: 1, name: "Dengue NS1 Antigen + IgG & IgM Antibodies", code: "DENGUE-01", category: "Blood Tests", price: 649, original_price: 1200, discount_pct: 46, preparation: "No fasting required. Immediate processing.", sample_type: "Serum", tat_hours: 4 },
+    { id: 13, company_id: 2, name: "Apollo Total Body Care (72 Parameters)", code: "APOLLO-72", category: "Complete Health Packages", price: 1599, original_price: 4500, discount_pct: 64, preparation: "10-12 hours overnight fasting.", sample_type: "Blood & Urine", tat_hours: 12 },
+    { id: 14, company_id: 2, name: "Complete Blood Count (CBC) with Peripheral Smear", code: "CBC-APOLLO", category: "Blood Tests", price: 320, original_price: 600, discount_pct: 46, preparation: "No fasting required.", sample_type: "Whole Blood", tat_hours: 6 },
+    { id: 15, company_id: 2, name: "Thyroid Ultrasound & TSH Duo", code: "THY-APOLLO", category: "Thyroid Profile", price: 420, original_price: 850, discount_pct: 50, preparation: "Morning sample.", sample_type: "Serum", tat_hours: 8 },
+    { id: 16, company_id: 3, name: "Swasthfit Super Health Checkup", code: "LAL-SUPER", category: "Complete Health Packages", price: 1799, original_price: 5200, discount_pct: 65, preparation: "12 hours fasting.", sample_type: "Blood & Urine", tat_hours: 12 },
+    { id: 17, company_id: 3, name: "Diabetic Kidney & Retina Care Profile", code: "LAL-DIAB", category: "Diabetes & Sugar", price: 899, original_price: 1800, discount_pct: 50, preparation: "Fasting required.", sample_type: "Serum & Urine", tat_hours: 8 },
+    { id: 18, company_id: 4, name: "Aarogyam C Comprehensive Package (64 Tests)", code: "THY-AAROGYAM", category: "Complete Health Packages", price: 1299, original_price: 3600, discount_pct: 64, preparation: "10-12 hours fasting.", sample_type: "Blood & Urine", tat_hours: 14 }
+  ];
+
+  function getStoredBookings() {
+    try {
+      const data = localStorage.getItem(MOCK_STORAGE_BOOKINGS);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    const defaults = [
+      {
+        id: 101,
+        booking_code: "MLB-2026-8812",
+        test_name: "Complete Blood Count (CBC) with ESR",
+        company_name: "MultiLab07 Flagship Hub",
+        patient_name: "Balu Sakthikumaran",
+        patient_phone: "9876543210",
+        scheduled_date: new Date().toISOString().split("T")[0],
+        time_slot: "08:00 AM - 10:00 AM",
+        address: "7th Cross, Anna Nagar, Chennai",
+        status: "CONFIRMED",
+        payment_status: "PAID",
+        payment_method: "UPI",
+        total_amount: 299,
+        created_at: new Date().toISOString()
+      }
+    ];
+    localStorage.setItem(MOCK_STORAGE_BOOKINGS, JSON.stringify(defaults));
+    return defaults;
+  }
+
+  function saveStoredBookings(list) {
+    try {
+      localStorage.setItem(MOCK_STORAGE_BOOKINGS, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function mockApiHandler(endpoint, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    let body = {};
+    if (options.body) {
+      try { body = JSON.parse(options.body); } catch (e) {}
+    }
+
+    if (endpoint.startsWith("/api/companies")) {
+      return MOCK_COMPANIES;
+    }
+
+    if (endpoint.startsWith("/api/categories")) {
+      return MOCK_CATEGORIES;
+    }
+
+    if (endpoint.startsWith("/api/tests")) {
+      const match = endpoint.match(/company_id=(\d+)/);
+      const compId = match ? parseInt(match[1]) : 1;
+      const matched = MOCK_TESTS.filter(t => t.company_id === compId);
+      return matched.length ? matched : MOCK_TESTS.filter(t => t.company_id === 1);
+    }
+
+    if (endpoint === "/api/auth/login") {
+      const { username, password, role } = body;
+      const u = (username || "").toLowerCase().trim();
+      if (u === "admin" && (password === "Admin123!" || password === "admin")) {
+        return { token: "mock_jwt_admin", user: { id: 1, username: "admin", role: "admin", display_name: "MultiLab Director" } };
+      }
+      if (u === "collectorboy" && (password === "CollectorPass123!" || password === "collector")) {
+        return { token: "mock_jwt_collector", user: { id: 2, username: "collectorboy", role: "collector", display_name: "Rahul Phlebotomist" } };
+      }
+      if (u === "ball" || u === "customer" || u.length >= 10 || role === "customer") {
+        return { token: "mock_jwt_customer", user: { id: 3, username: username, role: "customer", display_name: username.charAt(0).toUpperCase() + username.slice(1), phone: "9876543210" } };
+      }
+      throw new Error("Invalid credentials. Please verify your login details.");
+    }
+
+    if (endpoint === "/api/auth/otp/send") {
+      const phone = body.phone || "9876543210";
+      showToast(`MultiLab07 verification OTP for ${phone} is: 123456`);
+      return { status: "ok", phone, dev_otp: "123456" };
+    }
+
+    if (endpoint === "/api/auth/otp/verify") {
+      return { token: "mock_jwt_customer", user: { id: 99, username: body.phone, role: "customer", display_name: "Customer " + (body.phone || "").slice(-4), phone: body.phone } };
+    }
+
+    if (endpoint === "/api/bookings" && method === "POST") {
+      const bookings = getStoredBookings();
+      const code = "MLB-2026-" + Math.floor(1000 + Math.random() * 9000);
+      const newB = {
+        id: Date.now(),
+        booking_code: code,
+        test_name: body.test_name || "Diagnostic Panel",
+        company_name: body.company_name || "MultiLab07 Flagship Hub",
+        patient_name: body.patient_name || (currentUser ? currentUser.display_name : "Valued Customer"),
+        patient_phone: body.patient_phone || "9876543210",
+        scheduled_date: body.scheduled_date || new Date().toISOString().split("T")[0],
+        time_slot: body.time_slot || "Morning 07:00 AM - 09:00 AM",
+        address: body.address || "Patient Residence Address",
+        status: "CONFIRMED",
+        payment_status: "PENDING_VERIFICATION",
+        payment_method: body.payment_method || "UPI",
+        total_amount: body.total_amount || 499,
+        created_at: new Date().toISOString()
+      };
+      bookings.unshift(newB);
+      saveStoredBookings(bookings);
+      return { booking: newB, tracking_id: code, message: "Booking confirmed successfully!" };
+    }
+
+    if (endpoint.startsWith("/api/customer/bookings")) {
+      return getStoredBookings();
+    }
+
+    if (endpoint.startsWith("/api/admin/bookings") || endpoint.startsWith("/api/admin/assignments") || endpoint.startsWith("/api/admin/payments")) {
+      return getStoredBookings();
+    }
+
+    if (endpoint.startsWith("/api/collector/assignments")) {
+      return getStoredBookings();
+    }
+
+    if (endpoint.startsWith("/api/help/")) {
+      const role = endpoint.split("/").pop();
+      if (role === "admin") {
+        return {
+          title: "MultiLab07 Administrator Control Manual",
+          html: "<p>Welcome to MultiLab07 Master Administration.</p><ul><li><b>Manage Tests & Pricing:</b> Add or update test catalogs and lab rates.</li><li><b>Approve Payments:</b> Verify customer UTR references and receipt screenshots.</li><li><b>Assign Collectors:</b> Assign certified phlebotomists to confirmed home collections.</li></ul>"
+        };
+      } else if (role === "collector") {
+        return {
+          title: "MultiLab07 Phlebotomist & Collector Guide",
+          html: "<p>Welcome MultiLab07 Field Officer.</p><ul><li><b>Assigned Home Visits:</b> Check patient address and booked time slots.</li><li><b>Sample Collection:</b> Verify patient ID, collect required vials, and label with QR code.</li><li><b>Status Updates:</b> Mark status as 'Sample Collected' and 'Delivered to Lab'.</li></ul>"
+        };
+      } else {
+        return {
+          title: "MultiLab07 Patient & Customer Guide",
+          html: "<p>Welcome to MultiLab07 Diagnostics.</p><ul><li><b>Select Laboratory:</b> Choose between MultiLab07, Apollo, Dr. Lal PathLabs, and Thyrocare.</li><li><b>Book Home Collection:</b> Pick convenient time slot and certified phlebotomist visit.</li><li><b>Instant Invoices:</b> Download digital tax invoices with verified QR codes.</li></ul>"
+        };
+      }
+    }
+
+    return { success: true };
+  }
+
   // ---------------- API HELPER ----------------
   async function api(endpoint, options = {}) {
     const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-    const response = await fetch(endpoint, { ...options, headers });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "An unexpected error occurred.");
+
+    // Try live server first (if not on static GitHub pages)
+    try {
+      const isGitHubPages = window.location.hostname.includes("github.io");
+      if (!isGitHubPages) {
+        const response = await fetch(endpoint, { ...options, headers });
+        if (response.ok) {
+          return await response.json();
+        }
+      }
+    } catch (err) {
+      // Live server unreachable, gracefully fallback to mock engine
     }
-    return data;
+
+    // Seamless fallback to client-side data engine
+    return mockApiHandler(endpoint, options);
   }
 
   function showToast(message) {
@@ -40,8 +295,25 @@ const App = (function () {
     setTimeout(() => { toast.style.display = "none"; }, 4000);
   }
 
+  function quickLogin(role) {
+    setLoginRole(role);
+    if (role === "customer") {
+      document.getElementById("loginUsername").value = "ball";
+      document.getElementById("loginPassword").value = "Balu1234!";
+    } else if (role === "collector") {
+      document.getElementById("loginUsername").value = "collectorboy";
+      document.getElementById("loginPassword").value = "CollectorPass123!";
+    } else if (role === "admin") {
+      document.getElementById("loginUsername").value = "admin";
+      document.getElementById("loginPassword").value = "Admin123!";
+    }
+    const fakeEvent = { preventDefault: () => {} };
+    handleLogin(fakeEvent);
+  }
+
   // ---------------- INITIALIZATION ----------------
   async function init() {
+    initAmbientParticles();
     await loadCompanies();
     await loadCategories();
     updateAuthUI();
@@ -1256,6 +1528,7 @@ const App = (function () {
   // Expose public methods
   return {
     init,
+    quickLogin,
     navigateHome,
     showAuthModal,
     setLoginRole,

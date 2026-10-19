@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 </head>
 <body>
+  <!-- High-Tech Interactive Live Molecular Background -->
+  <canvas id="particleCanvas"></canvas>
 
   <!-- TOP NAVIGATION BAR -->
   <header class="navbar">
@@ -46,7 +48,7 @@
     <div id="authSection" class="panel" style="max-width:520px; margin:40px auto; display:none;">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Sign in to BloodLab</h2>
+          <h2 class="panel-title">Sign in to MultiLab07</h2>
           <p class="panel-subtitle">Select your authorized account role</p>
         </div>
       </div>
@@ -60,7 +62,7 @@
 
       <form id="loginForm" onsubmit="App.handleLogin(event)">
         <div class="form-group">
-          <label class="form-label" id="loginUserLabel">Username, Email, or Mobile</label>
+          <label class="form-label" id="loginUserLabel">Username, Email, or 10-Digit Mobile</label>
           <input type="text" id="loginUsername" class="form-control" required placeholder="Enter your registered username" />
         </div>
 
@@ -75,11 +77,18 @@
         <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:8px;">Sign in as Customer</button>
       </form>
 
-      <div id="customerSignupPrompt" style="margin-top:20px; text-align:center; font-size:13px; color:var(--text-muted);">
+      <div class="demo-accounts">
+        <span style="font-size:11px; font-weight:700; color:var(--text-muted); width:100%;">⚡ 1-Tap Instant Demo Login:</span>
+        <button type="button" class="demo-pill" onclick="App.quickLogin('customer')">👤 Customer (ball)</button>
+        <button type="button" class="demo-pill" onclick="App.quickLogin('collector')">🛵 Collector Boy</button>
+        <button type="button" class="demo-pill" onclick="App.quickLogin('admin')">🛡️ Admin</button>
+      </div>
+
+      <div id="customerSignupPrompt" style="margin-top:16px; text-align:center; font-size:13px; color:var(--text-muted);">
         Don't have an account? <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showRegisterModal()">Register with Mobile OTP</a>
       </div>
-      <div id="forgotPasswordPrompt" style="margin-top:10px; text-align:center; font-size:12px;">
-        <a href="#" style="color:#64748b; font-weight:600;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
+      <div id="forgotPasswordPrompt" style="margin-top:10px; text-align:center; font-size:13px;">
+        <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
       </div>
     </div>
 
@@ -532,7 +541,7 @@
       <div id="upiSection" style="display:none;">
         <div class="qr-container" style="margin-bottom:14px;">
           <img id="paymentQrImage" class="qr-image" src="" alt="Laboratory UPI QR Code" />
-          <div class="qr-upi-id" id="paymentUpiIdDisplay" style="margin-top:6px;">bloodlab@upi</div>
+          <div class="qr-upi-id" id="paymentUpiIdDisplay" style="margin-top:6px;">multilab07@upi</div>
           <div style="font-size:12px; color:#64748b; margin-top:4px;">Scan with any UPI app to pay exactly <span id="upiAmountInline" style="font-weight:700;">₹0.00</span></div>
         </div>
 
@@ -561,7 +570,7 @@
   <div id="helpModal" class="modal-backdrop" style="display:none;">
     <div class="modal-card" style="max-width:620px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="helpModalTitle">BloodLab Guide & Instructions</h3>
+        <h3 class="modal-title" id="helpModalTitle">MultiLab07 Guide & Instructions</h3>
         <button class="modal-close" onclick="App.closeModals()">✕</button>
       </div>
       <div id="helpModalBody" style="font-size:13.5px; line-height:1.6; color:#334155;">
@@ -593,7 +602,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Laboratory UPI ID for Payments</label>
-          <input type="text" id="newCompanyUpi" class="form-control" value="bloodlab@upi" required />
+          <input type="text" id="newCompanyUpi" class="form-control" value="multilab07@upi" required />
         </div>
         <div class="form-group">
           <label class="form-label">Helpline Phone & Email</label>
