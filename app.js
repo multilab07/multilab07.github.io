@@ -88,9 +88,6 @@ const App = (function () {
     animate();
   }
 
-  // ---------------- MOCK DATA & PERSISTENCE ENGINE ----------------
-  const MOCK_STORAGE_BOOKINGS = "multilab07_bookings_cache";
-  const MOCK_STORAGE_USERS = "multilab07_custom_users";
 
   const MOCK_COMPANIES = [
     { id: 1, name: "MultiLab07 Flagship Hub", brand_color: "#0284c7", theme_color: "#0284c7", upi_id: "multilab07@upi", contact_phone: "+91 98401 23456", contact_email: "care@multilab07.com", address: "Central Diagnostics Tower, Bangalore", is_primary_tab: true, active: true },
@@ -346,6 +343,61 @@ const App = (function () {
     }
   ];
 
+  // ---------------- MOCK DATA & FULL PERSISTENCE ENGINE ----------------
+  const MOCK_STORAGE_STAFF = "multilab07_staff_v4";
+  const MOCK_STORAGE_COMPANIES = "multilab07_companies_v4";
+  const MOCK_STORAGE_TESTS = "multilab07_tests_v4";
+  const MOCK_STORAGE_BOOKINGS = "multilab07_bookings_v4";
+
+  function getStoredStaff() {
+    try {
+      const data = localStorage.getItem(MOCK_STORAGE_STAFF);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    const defaultStaff = [
+      { id: 1, username: "admin", display_name: "MultiLab Director", role: "admin", password: "Admin123!", phone: "+91 98401 23456", active: true },
+      { id: 2, username: "collectorboy", display_name: "Rahul Phlebotomist", role: "collector", password: "CollectorPass123!", phone: "+91 98401 99999", active: true }
+    ];
+    localStorage.setItem(MOCK_STORAGE_STAFF, JSON.stringify(defaultStaff));
+    return defaultStaff;
+  }
+
+  function saveStoredStaff(list) {
+    try {
+      localStorage.setItem(MOCK_STORAGE_STAFF, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function getStoredCompanies() {
+    try {
+      const data = localStorage.getItem(MOCK_STORAGE_COMPANIES);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    localStorage.setItem(MOCK_STORAGE_COMPANIES, JSON.stringify(MOCK_COMPANIES));
+    return MOCK_COMPANIES;
+  }
+
+  function saveStoredCompanies(list) {
+    try {
+      localStorage.setItem(MOCK_STORAGE_COMPANIES, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function getStoredTests() {
+    try {
+      const data = localStorage.getItem(MOCK_STORAGE_TESTS);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    localStorage.setItem(MOCK_STORAGE_TESTS, JSON.stringify(MOCK_TESTS));
+    return MOCK_TESTS;
+  }
+
+  function saveStoredTests(list) {
+    try {
+      localStorage.setItem(MOCK_STORAGE_TESTS, JSON.stringify(list));
+    } catch (e) {}
+  }
+
   function getStoredBookings() {
     try {
       const data = localStorage.getItem(MOCK_STORAGE_BOOKINGS);
@@ -359,6 +411,8 @@ const App = (function () {
         company_name: "MultiLab07 Flagship Hub",
         patient_name: "Balu Sakthikumaran",
         patient_phone: "9876543210",
+        collector_name: "Rahul Phlebotomist",
+        collector_id: 2,
         scheduled_date: new Date().toISOString().split("T")[0],
         time_slot: "08:00 AM - 10:00 AM",
         address: "7th Cross, Anna Nagar, Chennai",
@@ -366,6 +420,24 @@ const App = (function () {
         payment_status: "PAID",
         payment_method: "UPI",
         total_amount: 299,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 102,
+        booking_code: "MLB-2026-9045",
+        test_name: "MultiLab07 Executive Platinum Health Check (84 Tests)",
+        company_name: "MultiLab07 Flagship Hub",
+        patient_name: "Priya Sharma",
+        patient_phone: "98401 55555",
+        collector_name: "Rahul Phlebotomist",
+        collector_id: 2,
+        scheduled_date: new Date().toISOString().split("T")[0],
+        time_slot: "07:00 AM - 09:00 AM",
+        address: "Flat 4B, Emerald Residency, T. Nagar, Chennai",
+        status: "CONFIRMED",
+        payment_status: "PENDING_VERIFICATION",
+        payment_method: "UPI",
+        total_amount: 1499,
         created_at: new Date().toISOString()
       }
     ];
@@ -383,37 +455,239 @@ const App = (function () {
     const method = (options.method || "GET").toUpperCase();
     let body = {};
     if (options.body) {
-      try { body = JSON.parse(options.body); } catch (e) {}
+      try {
+        body = typeof options.body === "string" ? JSON.parse(options.body) : options.body;
+      } catch (e) {}
     }
 
-    if (endpoint.startsWith("/api/companies")) {
-      return MOCK_COMPANIES;
+    // 1. Companies (Admin & Public)
+    if ((endpoint.startsWith("/api/companies") || endpoint.startsWith("/api/admin/companies")) && !endpoint.includes("/tests")) {
+      const compList = getStoredCompanies();
+
+      // Toggle company active status
+      if (endpoint.includes("/toggle") && method === "PATCH") {
+        const parts = endpoint.split("/");
+        const id = parseInt(parts[parts.indexOf("companies") + 1]);
+        const target = compList.find((c) => c.id === id);
+        if (target) {
+          target.active = Boolean(body.active);
+          saveStoredCompanies(compList);
+          return { success: true, message: `Company '${target.name}' status updated.`, company: target };
+        }
+      }
+
+      // Edit company details (PATCH or PUT /api/admin/companies/:id)
+      if ((method === "PATCH" || method === "PUT") && endpoint.match(/\/companies\/(\d+)/)) {
+        const match = endpoint.match(/\/companies\/(\d+)/);
+        const id = parseInt(match[1]);
+        const target = compList.find((c) => c.id === id);
+        if (target) {
+          if (body.name) target.name = body.name;
+          if (body.brand_color) { target.brand_color = body.brand_color; target.theme_color = body.brand_color; }
+          if (body.logo_url !== undefined) target.logo_url = body.logo_url;
+          if (body.upi_id) target.upi_id = body.upi_id;
+          if (body.contact_phone) target.contact_phone = body.contact_phone;
+          if (body.contact_email) target.contact_email = body.contact_email;
+          if (body.address) target.address = body.address;
+          saveStoredCompanies(compList);
+          return { success: true, message: `Company '${target.name}' updated successfully!`, company: target };
+        } else {
+          throw new Error(`Company with ID ${id} not found.`);
+        }
+      }
+
+      if (method === "POST") {
+        const newComp = {
+          id: compList.length + 1,
+          name: body.name || "New Laboratory",
+          brand_color: body.brand_color || body.theme_color || "#0284c7",
+          theme_color: body.brand_color || body.theme_color || "#0284c7",
+          logo_url: body.logo_url || "",
+          upi_id: body.upi_id || "multilab07@upi",
+          contact_phone: body.contact_phone || "+91 98401 23456",
+          contact_email: body.contact_email || "care@multilab07.com",
+          address: body.address || "Diagnostic Laboratory Center",
+          is_primary_tab: false,
+          active: true
+        };
+        compList.push(newComp);
+        saveStoredCompanies(compList);
+        return newComp;
+      }
+      return getStoredCompanies();
     }
 
+    // 2. Categories
     if (endpoint.startsWith("/api/categories")) {
       return MOCK_CATEGORIES;
     }
 
-    if (endpoint.startsWith("/api/tests")) {
+    // 3. Tests & Pricing (Admin & Public)
+    if (endpoint.startsWith("/api/tests") && method === "GET") {
       const match = endpoint.match(/company_id=(\d+)/);
       const compId = match ? parseInt(match[1]) : 1;
-      const matched = MOCK_TESTS.filter(t => t.company_id === compId);
-      return matched.length ? matched : MOCK_TESTS.filter(t => t.company_id === 1);
+      const allT = getStoredTests();
+      const matched = allT.filter((t) => t.company_id === compId);
+      return matched.length ? matched : allT.filter((t) => t.company_id === 1);
     }
 
+    // Save test pricing & details (PUT /api/admin/companies/:cid/tests/:tid or POST /api/admin/pricing)
+    if (
+      (endpoint.includes("/tests/") && (method === "PUT" || method === "PATCH")) ||
+      endpoint.startsWith("/api/admin/pricing") ||
+      endpoint === "/api/admin/tests/pricing"
+    ) {
+      const parts = endpoint.split("/");
+      const testIdFromUrl = parts.includes("tests") ? parseInt(parts[parts.indexOf("tests") + 1]) : null;
+      const targetId = testIdFromUrl || parseInt(body.test_id);
+
+      const allT = getStoredTests();
+      const target = allT.find((t) => t.id === targetId);
+      if (target) {
+        if (body.name) target.name = body.name;
+        if (body.code) target.code = body.code;
+        if (body.category) target.category = body.category;
+        if (body.price !== undefined) target.price = Number(body.price);
+        if (body.discount_percent !== undefined) target.discount_percent = Number(body.discount_percent);
+        target.final_price = target.price * (1 - (target.discount_percent || 0) / 100);
+        if (body.sample_type) target.sample_type = body.sample_type;
+        if (body.turnaround_time) target.turnaround_time = body.turnaround_time;
+        if (body.preparation !== undefined) target.preparation = body.preparation;
+        if (body.preparation_instructions !== undefined) target.preparation = body.preparation_instructions;
+        if (body.description !== undefined) target.description = body.description;
+        if (body.is_available !== undefined) target.is_available = body.is_available ? 1 : 0;
+        saveStoredTests(allT);
+        return { success: true, message: `Test '${target.name}' updated successfully!`, test: target };
+      }
+      throw new Error(`Test with ID ${targetId} not found.`);
+    }
+
+    if (endpoint === "/api/admin/tests" && method === "POST") {
+      const allT = getStoredTests();
+      const newT = {
+        id: Date.now(),
+        company_id: parseInt(body.company_id) || 1,
+        name: body.name || "Custom Diagnostic Test",
+        code: body.code || "MLB-" + Math.floor(100 + Math.random() * 900),
+        category: body.category || "Blood Tests",
+        price: Number(body.price || 499),
+        discount_percent: Number(body.discount_percent || 0),
+        final_price: Number(body.price || 499) * (1 - Number(body.discount_percent || 0) / 100),
+        description: body.description || "NABL certified diagnostic test.",
+        preparation: body.preparation || "No special preparation needed.",
+        sample_type: body.sample_type || "EDTA Whole Blood",
+        turnaround_time: body.turnaround_time || "12 hours",
+        is_available: 1
+      };
+      allT.push(newT);
+      saveStoredTests(allT);
+      return newT;
+    }
+
+    // 4. Staff & Collector Boys (Admin assigned usernames & passwords)
+    if (endpoint.startsWith("/api/admin/staff") || endpoint.startsWith("/api/admin/admins")) {
+      const staffList = getStoredStaff();
+
+      if (method === "POST") {
+        if (endpoint.includes("/reset-password")) {
+          const parts = endpoint.split("/");
+          const id = parseInt(parts[4]);
+          const target = staffList.find((s) => s.id === id);
+          if (target) {
+            target.password = body.temporary_password || body.password || "Password123!";
+            saveStoredStaff(staffList);
+            return { message: `Password successfully updated for ${target.username}!` };
+          }
+        }
+
+        const usernameTrimmed = (body.username || "").trim().toLowerCase();
+        if (!usernameTrimmed) {
+          throw new Error("Username is required.");
+        }
+        if (staffList.some((s) => s.username.toLowerCase() === usernameTrimmed)) {
+          throw new Error(`Username '${usernameTrimmed}' is already taken. Please choose another username.`);
+        }
+
+        const newStaff = {
+          id: Date.now(),
+          username: usernameTrimmed,
+          display_name: body.display_name || body.username,
+          role: endpoint.includes("admins") ? "admin" : "collector",
+          password: body.temporary_password || body.password || "Collector123!",
+          phone: body.phone || "+91 98401 00000",
+          active: true
+        };
+        staffList.push(newStaff);
+        saveStoredStaff(staffList);
+        return {
+          ...newStaff,
+          message: `Staff account '${newStaff.username}' successfully created.`
+        };
+      }
+
+      if (method === "PATCH") {
+        const parts = endpoint.split("/");
+        const id = parseInt(parts[4]);
+        const target = staffList.find((s) => s.id === id);
+        if (target && body.active !== undefined) {
+          target.active = Boolean(body.active);
+          saveStoredStaff(staffList);
+          return { message: "Staff status updated.", staff: target };
+        }
+      }
+
+      if (endpoint.startsWith("/api/admin/admins")) {
+        return staffList.filter((s) => s.role === "admin");
+      }
+      return staffList.filter((s) => s.role === "collector");
+    }
+
+    // 5. Authentication & Login
     if (endpoint === "/api/auth/login") {
       const { username, password, role } = body;
       const u = (username || "").toLowerCase().trim();
-      if (u === "admin" && (password === "Admin123!" || password === "admin")) {
-        return { token: "mock_jwt_admin", user: { id: 1, username: "admin", role: "admin", display_name: "MultiLab Director" } };
+      const staffList = getStoredStaff();
+
+      // Check Staff list (Admin or Collector Boy)
+      const matched = staffList.find((s) => s.username.toLowerCase() === u && s.active);
+      if (matched) {
+        if (matched.password === password) {
+          return {
+            access_token: "mlb_jwt_" + matched.role + "_" + Date.now(),
+            token_type: "Bearer",
+            role: matched.role,
+            username: matched.username,
+            display_name: matched.display_name,
+            must_change_password: false
+          };
+        } else {
+          throw new Error("Invalid password for '" + matched.username + "'. Please check uppercase/lowercase.");
+        }
       }
-      if (u === "collectorboy" && (password === "CollectorPass123!" || password === "collector")) {
-        return { token: "mock_jwt_collector", user: { id: 2, username: "collectorboy", role: "collector", display_name: "Rahul Phlebotomist" } };
+
+      // Check Customer login
+      if (role === "customer" || loginRole === "customer" || u === "ball" || u === "customer" || u.length >= 10) {
+        const dName = username.charAt(0).toUpperCase() + username.slice(1);
+        return {
+          access_token: "mlb_jwt_cust_" + Date.now(),
+          token_type: "Bearer",
+          role: "customer",
+          username: username,
+          display_name: dName
+        };
       }
-      if (u === "ball" || u === "customer" || u.length >= 10 || role === "customer") {
-        return { token: "mock_jwt_customer", user: { id: 3, username: username, role: "customer", display_name: username.charAt(0).toUpperCase() + username.slice(1), phone: "9876543210" } };
-      }
-      throw new Error("Invalid credentials. Please verify your login details.");
+
+      throw new Error(`Account '${username}' not found. Please verify your username.`);
+    }
+
+    if (endpoint === "/api/auth/customer/register" && method === "POST") {
+      return {
+        access_token: "mlb_jwt_cust_" + Date.now(),
+        token_type: "Bearer",
+        role: "customer",
+        username: body.username,
+        display_name: body.full_name || body.username
+      };
     }
 
     if (endpoint === "/api/auth/otp/send") {
@@ -423,9 +697,15 @@ const App = (function () {
     }
 
     if (endpoint === "/api/auth/otp/verify") {
-      return { token: "mock_jwt_customer", user: { id: 99, username: body.phone, role: "customer", display_name: "Customer " + (body.phone || "").slice(-4), phone: body.phone } };
+      return {
+        access_token: "mlb_jwt_otp_" + Date.now(),
+        role: "customer",
+        username: body.phone,
+        display_name: "Customer " + (body.phone || "").slice(-4)
+      };
     }
 
+    // 6. Bookings & Assignments
     if (endpoint === "/api/bookings" && method === "POST") {
       const bookings = getStoredBookings();
       const code = "MLB-2026-" + Math.floor(1000 + Math.random() * 9000);
@@ -454,7 +734,35 @@ const App = (function () {
       return getStoredBookings();
     }
 
-    if (endpoint.startsWith("/api/admin/bookings") || endpoint.startsWith("/api/admin/assignments") || endpoint.startsWith("/api/admin/payments")) {
+    if (endpoint.startsWith("/api/admin/bookings") || endpoint.startsWith("/api/admin/assignments")) {
+      if (method === "POST" && endpoint.includes("/assign")) {
+        const bId = parseInt(endpoint.split("/")[4]);
+        const bookings = getStoredBookings();
+        const staff = getStoredStaff();
+        const targetB = bookings.find((b) => b.id === bId);
+        const col = staff.find((s) => s.id === parseInt(body.collector_id));
+        if (targetB && col) {
+          targetB.collector_name = col.display_name;
+          targetB.collector_id = col.id;
+          targetB.status = "ASSIGNED";
+          saveStoredBookings(bookings);
+          return { success: true, message: `Successfully assigned to ${col.display_name}` };
+        }
+      }
+      return getStoredBookings();
+    }
+
+    if (endpoint.startsWith("/api/admin/payments")) {
+      if (method === "POST" && endpoint.includes("/verify")) {
+        const bId = parseInt(endpoint.split("/")[4]);
+        const bookings = getStoredBookings();
+        const targetB = bookings.find((b) => b.id === bId);
+        if (targetB) {
+          targetB.payment_status = "PAID";
+          saveStoredBookings(bookings);
+          return { success: true, message: "Payment verified successfully." };
+        }
+      }
       return getStoredBookings();
     }
 
@@ -462,22 +770,43 @@ const App = (function () {
       return getStoredBookings();
     }
 
+    if (endpoint.includes("/trips/") && endpoint.includes("/status")) {
+      const bId = parseInt(endpoint.split("/")[4]);
+      const bookings = getStoredBookings();
+      const targetB = bookings.find((b) => b.id === bId);
+      if (targetB) {
+        targetB.status = body.status || "SAMPLE_COLLECTED";
+        saveStoredBookings(bookings);
+        return { success: true, message: `Status updated to ${targetB.status}` };
+      }
+    }
+
     if (endpoint.startsWith("/api/help/")) {
       const role = endpoint.split("/").pop();
       if (role === "admin") {
         return {
           title: "MultiLab07 Administrator Control Manual",
-          html: "<p>Welcome to MultiLab07 Master Administration.</p><ul><li><b>Manage Tests & Pricing:</b> Add or update test catalogs and lab rates.</li><li><b>Approve Payments:</b> Verify customer UTR references and receipt screenshots.</li><li><b>Assign Collectors:</b> Assign certified phlebotomists to confirmed home collections.</li></ul>"
+          sections: [
+            { heading: "Managing Diagnostic Tests & Pricing", content: "Go to Test Master & Pricing tab to add tests or configure independent prices and discounts." },
+            { heading: "Collector Boy Staff Management", content: "Go to Collecting Boys & Admins to create new phlebotomist accounts, assign usernames & temporary passwords, or reset credentials." },
+            { heading: "Booking Assignments & Verification", content: "Assign certified collectors to home visits and verify customer payment receipts." }
+          ]
         };
       } else if (role === "collector") {
         return {
           title: "MultiLab07 Phlebotomist & Collector Guide",
-          html: "<p>Welcome MultiLab07 Field Officer.</p><ul><li><b>Assigned Home Visits:</b> Check patient address and booked time slots.</li><li><b>Sample Collection:</b> Verify patient ID, collect required vials, and label with QR code.</li><li><b>Status Updates:</b> Mark status as 'Sample Collected' and 'Delivered to Lab'.</li></ul>"
+          sections: [
+            { heading: "Scheduled Home Collections", content: "Check assigned bookings, patient addresses, and sample tubes required." },
+            { heading: "Status Updates", content: "Mark status as 'Sample Collected' and 'Delivered to Lab' after completing each home visit." }
+          ]
         };
       } else {
         return {
           title: "MultiLab07 Patient & Customer Guide",
-          html: "<p>Welcome to MultiLab07 Diagnostics.</p><ul><li><b>Select Laboratory:</b> Choose between MultiLab07, Apollo, Dr. Lal PathLabs, and Thyrocare.</li><li><b>Book Home Collection:</b> Pick convenient time slot and certified phlebotomist visit.</li><li><b>Instant Invoices:</b> Download digital tax invoices with verified QR codes.</li></ul>"
+          sections: [
+            { heading: "Laboratory Selection", content: "Choose between MultiLab07 Flagship Hub, Apollo, Dr. Lal PathLabs, and Thyrocare." },
+            { heading: "Home Blood Collection", content: "Schedule certified phlebotomist visits at your preferred doorstep time slot." }
+          ]
         };
       }
     }
@@ -602,9 +931,14 @@ const App = (function () {
   }
 
   async function handleLogin(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const username = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value;
+
+    if (!username || !password) {
+      showToast("Please enter both username and password.");
+      return;
+    }
 
     try {
       const res = await api("/api/auth/login", {
@@ -612,20 +946,24 @@ const App = (function () {
         body: JSON.stringify({ username, password, role: loginRole })
       });
 
-      token = res.access_token;
+      token = res.access_token || res.token || ("mlb_token_" + Date.now());
+      const userRole = res.role || loginRole;
+      const userName = res.username || username;
+      const displayName = res.display_name || userName;
+
       currentUser = {
-        role: res.role,
-        username: res.username,
-        display_name: res.display_name
+        role: userRole,
+        username: userName,
+        display_name: displayName
       };
       localStorage.setItem("bloodlab_token", token);
       localStorage.setItem("bloodlab_user", JSON.stringify(currentUser));
 
-      showToast(`Welcome back, ${currentUser.display_name}!`);
+      showToast(`Welcome back, ${displayName}!`);
       updateAuthUI();
-      switchRoleView(res.role);
+      switchRoleView(userRole);
     } catch (err) {
-      showToast(err.message);
+      showToast(err.message || "Invalid credentials. Please verify your login details.");
     }
   }
 
@@ -1339,15 +1677,60 @@ const App = (function () {
           <td><code>${c.upi_id}</code></td>
           <td><span class="badge badge-${c.active ? "paid" : "failed"}">${c.active ? "Active" : "Disabled"}</span></td>
           <td>
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="App.toggleCompanyActive(${c.id}, ${!c.active})">
-              ${c.active ? "Deactivate" : "Activate"}
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; font-weight:600;" onclick="App.openEditCompanyModal(${c.id})">✏ Edit Details</button>
+              <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="App.toggleCompanyActive(${c.id}, ${!c.active})">
+                ${c.active ? "Deactivate" : "Activate"}
+              </button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  function openEditCompanyModal(companyId) {
+    const compList = companies.length ? companies : getStoredCompanies();
+    const c = compList.find(item => item.id === parseInt(companyId));
+    if (!c) return;
+    document.getElementById("editCompanyId").value = c.id;
+    document.getElementById("editCompanyName").value = c.name || "";
+    document.getElementById("editCompanyColor").value = c.brand_color || c.theme_color || "#1769aa";
+    document.getElementById("editCompanyLogoUrl").value = c.logo_url || "";
+    document.getElementById("editCompanyUpi").value = c.upi_id || "multilab07@upi";
+    document.getElementById("editCompanyPhone").value = c.contact_phone || "";
+    document.getElementById("editCompanyEmail").value = c.contact_email || "";
+    document.getElementById("editCompanyAddress").value = c.address || "";
+    document.getElementById("editCompanyModalTitle").textContent = `Edit Laboratory: ${c.name}`;
+    document.getElementById("editCompanyModal").style.display = "flex";
+  }
+
+  async function handleUpdateCompany(e) {
+    e.preventDefault();
+    const companyId = document.getElementById("editCompanyId").value;
+    const payload = {
+      name: document.getElementById("editCompanyName").value.trim(),
+      brand_color: document.getElementById("editCompanyColor").value,
+      logo_url: document.getElementById("editCompanyLogoUrl").value.trim(),
+      upi_id: document.getElementById("editCompanyUpi").value.trim(),
+      contact_phone: document.getElementById("editCompanyPhone").value.trim(),
+      contact_email: document.getElementById("editCompanyEmail").value.trim(),
+      address: document.getElementById("editCompanyAddress").value.trim()
+    };
+    try {
+      const res = await api(`/api/admin/companies/${companyId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      });
+      closeModals();
+      showToast(res.message || "Laboratory details updated successfully.");
+      await loadCompanies();
+      loadAdminCompanies();
+    } catch (err) {
+      showToast(err.message);
     }
   }
 
@@ -1393,11 +1776,67 @@ const App = (function () {
     }
   }
 
+  let adminPricingTests = [];
+
+  function openAddTestModal() {
+    const sel = document.getElementById("addTestCompanySelect");
+    if (sel) {
+      sel.innerHTML = "";
+      const compList = companies.length ? companies : getStoredCompanies();
+      compList.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+      const pricingSelect = document.getElementById("adminPricingCompanySelect");
+      if (pricingSelect && pricingSelect.value) {
+        sel.value = pricingSelect.value;
+      }
+    }
+    document.getElementById("addTestForm").reset();
+    document.getElementById("addTestModal").style.display = "flex";
+  }
+
+  async function handleCreateTest(e) {
+    e.preventDefault();
+    const companyId = parseInt(document.getElementById("addTestCompanySelect").value) || 1;
+    const price = parseFloat(document.getElementById("addTestPrice").value);
+    const discount = parseFloat(document.getElementById("addTestDiscount").value || 0);
+    const payload = {
+      company_id: companyId,
+      name: document.getElementById("addTestName").value.trim(),
+      code: document.getElementById("addTestCode").value.trim() || ("MLB-" + Math.floor(100 + Math.random() * 900)),
+      category: document.getElementById("addTestCategory").value,
+      price: price,
+      discount_percent: discount,
+      turnaround_time: document.getElementById("addTestTurnaround").value.trim() || "12 hours",
+      sample_type: document.getElementById("addTestSample").value.trim() || "EDTA Whole Blood",
+      preparation: document.getElementById("addTestPrep").value.trim(),
+      description: document.getElementById("addTestDescription").value.trim(),
+      is_available: 1
+    };
+
+    try {
+      const res = await api("/api/admin/tests", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      closeModals();
+      showToast(`Test '${res.name}' created successfully!`);
+      loadAdminPricing(companyId);
+      loadTestsForCurrentCompany();
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
   async function loadAdminPricing(companyId) {
     const sel = document.getElementById("adminPricingCompanySelect");
     const cId = companyId || (sel ? sel.value : 1) || 1;
     try {
       const tests = await api(`/api/tests?company_id=${cId}`);
+      adminPricingTests = tests;
       const tbody = document.getElementById("adminPricingTbody");
       tbody.innerHTML = "";
 
@@ -1412,7 +1851,7 @@ const App = (function () {
           <td>${t.sample_type}</td>
           <td><span class="badge badge-${t.is_available ? "paid" : "failed"}">${t.is_available ? "Available" : "Unavailable"}</span></td>
           <td>
-            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="App.openEditPricingModal(${cId}, ${t.id})">Configure</button>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:12px; font-weight:600;" onclick="App.openEditPricingModal(${cId}, ${t.id})">✏ Edit Test & Price</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -1423,14 +1862,24 @@ const App = (function () {
   }
 
   function openEditPricingModal(companyId, testId) {
-    const test = allTests.find(t => t.id === testId);
+    const test = (adminPricingTests || []).find(t => t.id === parseInt(testId)) ||
+                 allTests.find(t => t.id === parseInt(testId)) ||
+                 getStoredTests().find(t => t.id === parseInt(testId));
+    if (!test) return;
+
     document.getElementById("priceEditCompanyId").value = companyId;
-    document.getElementById("priceEditTestId").value = testId;
-    document.getElementById("editPricingTitle").textContent = `Configure Pricing: ${test ? test.name : "Test"}`;
-    document.getElementById("priceEditPrice").value = test ? test.price : 300.0;
-    document.getElementById("priceEditDiscount").value = test ? test.discount_percent : 0.0;
-    document.getElementById("priceEditSample").value = test ? test.sample_type : "Blood";
-    document.getElementById("priceEditPrep").value = test ? test.preparation : "";
+    document.getElementById("priceEditTestId").value = test.id;
+    document.getElementById("editPricingTitle").textContent = `Edit Test: ${test.name}`;
+    document.getElementById("priceEditName").value = test.name || "";
+    document.getElementById("priceEditCode").value = test.code || "";
+    document.getElementById("priceEditCategory").value = test.category || "Blood Tests";
+    document.getElementById("priceEditPrice").value = test.price || 300.0;
+    document.getElementById("priceEditDiscount").value = test.discount_percent || 0.0;
+    document.getElementById("priceEditTurnaround").value = test.turnaround_time || "12 hours";
+    document.getElementById("priceEditSample").value = test.sample_type || "EDTA Lavender Top Tube (Whole Blood)";
+    document.getElementById("priceEditPrep").value = test.preparation || "";
+    document.getElementById("priceEditDescription").value = test.description || "";
+    document.getElementById("priceEditAvailable").value = test.is_available === 0 ? "0" : "1";
     document.getElementById("editPricingModal").style.display = "flex";
   }
 
@@ -1438,12 +1887,23 @@ const App = (function () {
     e.preventDefault();
     const companyId = document.getElementById("priceEditCompanyId").value;
     const testId = document.getElementById("priceEditTestId").value;
+    const price = parseFloat(document.getElementById("priceEditPrice").value);
+    const discount = parseFloat(document.getElementById("priceEditDiscount").value || 0);
+
     const payload = {
-      price: parseFloat(document.getElementById("priceEditPrice").value),
-      discount_percent: parseFloat(document.getElementById("priceEditDiscount").value),
+      test_id: parseInt(testId),
+      company_id: parseInt(companyId),
+      name: document.getElementById("priceEditName").value.trim(),
+      code: document.getElementById("priceEditCode").value.trim(),
+      category: document.getElementById("priceEditCategory").value,
+      price: price,
+      discount_percent: discount,
+      turnaround_time: document.getElementById("priceEditTurnaround").value.trim(),
       sample_type: document.getElementById("priceEditSample").value.trim(),
+      preparation: document.getElementById("priceEditPrep").value.trim(),
       preparation_instructions: document.getElementById("priceEditPrep").value.trim(),
-      is_available: document.getElementById("priceEditAvailable").value === "1"
+      description: document.getElementById("priceEditDescription").value.trim(),
+      is_available: document.getElementById("priceEditAvailable").value === "1" ? 1 : 0
     };
 
     try {
@@ -1452,8 +1912,9 @@ const App = (function () {
         body: JSON.stringify(payload)
       });
       closeModals();
-      showToast(res.message);
+      showToast(res.message || "Test details & pricing updated successfully!");
       loadAdminPricing(companyId);
+      loadTestsForCurrentCompany();
     } catch (err) {
       showToast(err.message);
     }
@@ -1789,7 +2250,11 @@ const App = (function () {
     toggleCompanyActive,
     openAddCompanyModal,
     handleCreateCompany,
+    openEditCompanyModal,
+    handleUpdateCompany,
     loadAdminPricing,
+    openAddTestModal,
+    handleCreateTest,
     openEditPricingModal,
     handleSaveTestPricing,
     loadAdminStaff,
@@ -1801,8 +2266,13 @@ const App = (function () {
     updateCollectorStatus,
     openHelpModal,
     closeModals,
-    togglePassword
+    togglePassword,
+    api,
+    getStoredStaff,
+    getStoredCompanies,
+    getStoredTests
   };
 })();
 
+window.App = App;
 window.addEventListener("DOMContentLoaded", App.init);
