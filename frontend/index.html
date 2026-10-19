@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BloodLab — Verified Multi-Company Diagnostic & Home Collection Platform</title>
+  <title>MultiLab07 — Verified Multi-Company Diagnostic & Home Collection Platform</title>
   <link rel="stylesheet" href="styles.css" />
   <!-- Leaflet CSS for live collector GPS mapping -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -13,9 +13,9 @@
   <!-- TOP NAVIGATION BAR -->
   <header class="navbar">
     <div class="brand-wrap" onclick="App.navigateHome()">
-      <div class="brand-icon">🩸</div>
+      <div class="brand-icon">🔬</div>
       <div class="brand-text">
-        <h1>BloodLab</h1>
+        <h1>MultiLab<span style="color:#0ea5e9;">07</span></h1>
         <p>National Pathology & Diagnostic Network</p>
       </div>
     </div>
@@ -78,8 +78,8 @@
       <div id="customerSignupPrompt" style="margin-top:20px; text-align:center; font-size:13px; color:var(--text-muted);">
         Don't have an account? <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showRegisterModal()">Register with Mobile OTP</a>
       </div>
-      <div style="margin-top:10px; text-align:center; font-size:12px;">
-        <a href="#" style="color:#64748b;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
+      <div id="forgotPasswordPrompt" style="margin-top:10px; text-align:center; font-size:12px;">
+        <a href="#" style="color:#64748b; font-weight:600;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
       </div>
     </div>
 

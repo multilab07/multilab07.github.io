@@ -87,18 +87,22 @@ const App = (function () {
     const submitBtn = document.getElementById("loginSubmitBtn");
     const signupPrompt = document.getElementById("customerSignupPrompt");
     const userLabel = document.getElementById("loginUserLabel");
+    const forgotPrompt = document.getElementById("forgotPasswordPrompt");
 
     if (role === "customer") {
       submitBtn.textContent = "Sign in as Customer";
       signupPrompt.style.display = "block";
+      if (forgotPrompt) forgotPrompt.style.display = "block";
       userLabel.textContent = "Username, Email, or 10-Digit Mobile";
     } else if (role === "collector") {
       submitBtn.textContent = "Sign in as Collector Boy";
       signupPrompt.style.display = "none";
+      if (forgotPrompt) forgotPrompt.style.display = "none";
       userLabel.textContent = "Assigned Collector Username";
     } else {
       submitBtn.textContent = "Sign in as Admin";
       signupPrompt.style.display = "none";
+      if (forgotPrompt) forgotPrompt.style.display = "none";
       userLabel.textContent = "Admin Username";
     }
   }

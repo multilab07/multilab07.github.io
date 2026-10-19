@@ -1358,5 +1358,5 @@ if __name__ == "__main__":
     init_and_migrate_db()
     seed_admin_user()
     port = int(os.environ.get("PORT", 5000))
-    print(f"Starting BloodLab Server on http://127.0.0.1:{port}...")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    print(f"Starting MultiLab Server on http://0.0.0.0:{port} (Accessible locally and on Wi-Fi)...")
+    app.run(host="0.0.0.0", port=port, debug=False)
