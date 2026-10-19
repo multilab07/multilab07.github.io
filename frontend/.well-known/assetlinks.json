@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.multilab07.app",
+        "sha256_cert_fingerprints": ["6E:D4:D5:8D:53:CB:90:84:AF:4B:2F:B3:65:AB:AC:9A:1E:54:D1:A9:07:F4:0B:3D:8D:C9:A9:2B:80:4E:C7:E7"]
+      }
+    }]

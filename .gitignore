@@ -17,11 +17,17 @@ env/
 .gradle/
 build/
 app/build/
+*.zip
 *.apk
 *.aab
+!android-package/app-release-signed.apk
+!android-package/app-release.aab
+!frontend/android-package/app-release-signed.apk
+!frontend/android-package/app-release.aab
 
 # Local OS & IDE files
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+build_android_package.js
