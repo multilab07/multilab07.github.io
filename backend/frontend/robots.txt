@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://labt4101-wq.github.io/multilab07/sitemap.xml
