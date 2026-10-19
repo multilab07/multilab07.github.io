@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MultiLab07 — Verified Multi-Company Diagnostic & Home Collection Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Leaflet CSS for live collector GPS mapping -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+</head>
+<body>
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="navbar">
+    <div class="brand-wrap" onclick="App.navigateHome()">
+      <div class="brand-icon">🔬</div>
+      <div class="brand-text">
+        <h1>MultiLab<span style="color:#0ea5e9;">07</span></h1>
+        <p>National Pathology & Diagnostic Network</p>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Role indicator -->
+      <div id="roleBadge" class="role-badge" style="display:none;">
+        <span id="roleBadgeDot">●</span>
+        <span id="roleBadgeText">Customer</span>
+      </div>
+
+      <!-- Current user name -->
+      <span id="navUserName" style="font-size:13px; font-weight:700; color:var(--text-main); display:none;"></span>
+
+      <!-- Help icon button at top-right of each role-specific dashboard -->
+      <button id="helpBtn" class="help-btn" title="Dashboard Instructions & Help" onclick="App.openHelpModal()">?</button>
+
+      <!-- Auth actions -->
+      <button id="signInNavBtn" class="btn btn-primary" onclick="App.showAuthModal()">Sign in</button>
+      <button id="signOutNavBtn" class="btn btn-outline" style="display:none;" onclick="App.logout()">Sign out</button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="container">
+
+    <!-- 1. AUTHENTICATION & ROLE SELECTION VIEW (When not logged in) -->
+    <div id="authSection" class="panel" style="max-width:520px; margin:40px auto; display:none;">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Sign in to BloodLab</h2>
+          <p class="panel-subtitle">Select your authorized account role</p>
+        </div>
+      </div>
+
+      <!-- Exactly three primary login options -->
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="App.setLoginRole('customer')">Customer</button>
+        <button class="tab-btn" onclick="App.setLoginRole('collector')">Collector Boy</button>
+        <button class="tab-btn" onclick="App.setLoginRole('admin')">Admin</button>
+      </div>
+
+      <form id="loginForm" onsubmit="App.handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" id="loginUserLabel">Username, Email, or Mobile</label>
+          <input type="text" id="loginUsername" class="form-control" required placeholder="Enter your registered username" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-group">
+            <input type="password" id="loginPassword" class="form-control" required placeholder="Enter password" />
+            <button type="button" class="btn btn-outline" onclick="App.togglePassword('loginPassword')">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:8px;">Sign in as Customer</button>
+      </form>
+
+      <div id="customerSignupPrompt" style="margin-top:20px; text-align:center; font-size:13px; color:var(--text-muted);">
+        Don't have an account? <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showRegisterModal()">Register with Mobile OTP</a>
+      </div>
+      <div id="forgotPasswordPrompt" style="margin-top:10px; text-align:center; font-size:12px;">
+        <a href="#" style="color:#64748b; font-weight:600;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
+      </div>
+    </div>
+
+    <!-- 2. CUSTOMER VIEW -->
+    <div id="customerSection" style="display:none;">
+      <!-- Hero Banner for Selected Laboratory -->
+      <div class="hero-card" id="heroCard">
+        <div class="hero-info">
+          <span class="company-switch-badge" id="heroBadge">Accredited Laboratory</span>
+          <h2 id="heroTitle" style="margin-top:10px;">Apollo Diagnostics</h2>
+          <p id="heroSubtitle">Verified diagnostic tests, NABL/CAP-accredited specimen processing, and scheduled phlebotomist home collection.</p>
+        </div>
+        <div>
+          <!-- Accessible company selector for newly added companies without breaking bottom 3 tabs -->
+          <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:4px; opacity:0.9;">Choose Laboratory</label>
+          <select id="companySelectorDropdown" class="form-control" style="font-weight:700; min-width:220px;" onchange="App.handleDropdownCompanyChange(this.value)">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Customer Subtabs: Test Catalogue vs My Bookings -->
+      <div class="tabs-header">
+        <button class="tab-btn active" id="subtabCatalogue" onclick="App.showCustomerSubtab('catalogue')">Test Catalogue</button>
+        <button class="tab-btn" id="subtabMyBookings" onclick="App.showCustomerSubtab('myBookings')">My Bookings & Receipts</button>
+      </div>
+
+      <!-- Catalogue Subtab -->
+      <div id="customerCatalogueView">
+        <!-- Search and Categories -->
+        <div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+          <input type="text" id="testSearchInput" class="form-control" placeholder="Search tests (e.g. CBC, Thyroid, Glucose, Lipid, Vitamin D)..." style="max-width:400px;" oninput="App.handleTestSearch(this.value)" />
+        </div>
+
+        <!-- Category pills (All 11 required categories) -->
+        <div class="categories-bar" id="categoriesBar">
+          <button class="cat-pill active" onclick="App.filterCategory('All')">All Tests</button>
+          <!-- Populated from /api/categories -->
+        </div>
+
+        <!-- Tests Grid -->
+        <div class="tests-grid" id="testsGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- My Bookings Subtab -->
+      <div id="customerBookingsView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">My Diagnostic Bookings & Invoices</h2>
+            <p class="panel-subtitle">Review booking statuses, verify payment references, and download official tax receipts.</p>
+          </div>
+          <button class="btn btn-outline" onclick="App.loadCustomerBookings()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking Ref</th>
+                <th>Diagnostic Lab</th>
+                <th>Test Name</th>
+                <th>Appointment Slot</th>
+                <th>Amount</th>
+                <th>Payment Status</th>
+                <th>Collection Status</th>
+                <th>Official Receipt</th>
+              </tr>
+            </thead>
+            <tbody id="customerBookingsTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ADMIN DASHBOARD -->
+    <div id="adminSection" style="display:none;">
+      <!-- Stats Summary -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Total Bookings</span>
+          <span class="stat-value" id="adminStatBookings">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Pending Payments</span>
+          <span class="stat-value" id="adminStatPendingPay">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Active Trips</span>
+          <span class="stat-value" id="adminStatTrips">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Active Phlebotomists</span>
+          <span class="stat-value" id="adminStatCollectors">0</span>
+        </div>
+      </div>
+
+      <!-- Admin Tabs -->
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="App.showAdminTab('assignments')">Bookings & Assignments</button>
+        <button class="tab-btn" onclick="App.showAdminTab('payments')">UPI Payment Verification</button>
+        <button class="tab-btn" onclick="App.showAdminTab('companies')">Company Catalogue</button>
+        <button class="tab-btn" onclick="App.showAdminTab('tests')">Test Master & Pricing</button>
+        <button class="tab-btn" onclick="App.showAdminTab('staff')">Collecting Boys & Admins</button>
+        <button class="tab-btn" onclick="App.showAdminTab('tracking')">Live Transit Map</button>
+      </div>
+
+      <!-- Admin Tab 1: Bookings & Collector Assignments -->
+      <div id="adminAssignmentsView" class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Diagnostic Test Bookings</h2>
+            <p class="panel-subtitle">Assign phlebotomists and manage home collection appointments.</p>
+          </div>
+          <button class="btn btn-outline" onclick="App.loadAdminAssignments()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ref ID</th>
+                <th>Patient Details</th>
+                <th>Test & Company</th>
+                <th>Address & Slot</th>
+                <th>Payment</th>
+                <th>Collection Status</th>
+                <th>Assign Collector</th>
+              </tr>
+            </thead>
+            <tbody id="adminAssignmentsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab 2: Payment Verification -->
+      <div id="adminPaymentsView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Payment Verification & Reconciliation</h2>
+            <p class="panel-subtitle">Verify UPI transfers (check UTR + uploaded receipt) and confirm Cash on Arrival collections. Receipts are released ONLY after approval.</p>
+          </div>
+          <button class="btn btn-outline" onclick="App.loadAdminPayments()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking Ref</th>
+                <th>Patient</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>UTR / Transfer ID</th>
+                <th>Receipt</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminPaymentsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab 3: Company Catalogue Management -->
+      <div id="adminCompaniesView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Diagnostic Companies & Branding</h2>
+            <p class="panel-subtitle">Add laboratories, upload authorised logos, edit colors, and configure UPI IDs without source code changes.</p>
+          </div>
+          <button class="btn btn-primary" onclick="App.openAddCompanyModal()">+ Add New Company</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Company Name</th>
+                <th>Brand Colour</th>
+                <th>Logo / Preview</th>
+                <th>Contact Phone & Email</th>
+                <th>Configured UPI ID</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminCompaniesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab 4: Master Test Catalogue & Company Pricing -->
+      <div id="adminTestsView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Master Test Catalogue & Independent Pricing</h2>
+            <p class="panel-subtitle">Configure independent company prices, discounts, sample types, and preparation instructions.</p>
+          </div>
+          <button class="btn btn-primary" onclick="App.openAddTestModal()">+ Add New Test</button>
+        </div>
+        <div style="display:flex; gap:14px; margin-bottom:16px; align-items:center;">
+          <label class="form-label" style="margin:0;">Select Laboratory to Configure Pricing:</label>
+          <select id="adminPricingCompanySelect" class="form-control" style="max-width:280px;" onchange="App.loadAdminPricing(this.value)">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Test Name</th>
+                <th>Category</th>
+                <th>Company Price</th>
+                <th>Discount %</th>
+                <th>Sample Type</th>
+                <th>Availability</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminPricingTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab 5: Collector Boys & Staff -->
+      <div id="adminStaffView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Blood Collecting Boys & Admin Accounts</h2>
+            <p class="panel-subtitle">Create unique collector logins with temporary passwords. Public registration never creates staff.</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" onclick="App.openAddCollectorModal()">+ Add Collecting Boy</button>
+            <button class="btn btn-secondary" onclick="App.openAddAdminModal()">+ Add Admin</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Display Name</th>
+                <th>Username</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminStaffTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab 6: Live Transit Tracking Map -->
+      <div id="adminTrackingView" class="panel" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Live Active-Trip Collector Map</h2>
+            <p class="panel-subtitle">GPS coordinates are streamed strictly while phlebotomists are on active transit ("On the Way" or "Arrived").</p>
+          </div>
+          <span id="mapStatusBadge" class="badge badge-pending">Polling Active Trips (10s)</span>
+        </div>
+        <div id="adminMap"></div>
+      </div>
+    </div>
+
+    <!-- 4. COLLECTOR BOY PORTAL -->
+    <div id="collectorSection" class="panel" style="display:none;">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Collector Boy Portal — Assigned Home Collections</h2>
+          <p class="panel-subtitle">Review home collection orders, patient contact, required blood tubes, and update trip transit status.</p>
+        </div>
+        <button class="btn btn-outline" onclick="App.loadCollectorAssignments()">Refresh List</button>
+      </div>
+
+      <div id="collectorGpsBanner" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; padding:12px 18px; border-radius:var(--radius-sm); margin-bottom:16px; font-size:13px; color:#065f46;">
+        📍 <b>Authorized Live GPS Tracking Active:</b> Your coordinates are currently being transmitted to the laboratory operations center. Tracking will cease immediately when sample collection is complete.
+      </div>
+
+      <div id="collectorTasksContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SOCIAL-MEDIA STYLE BOTTOM NAVIGATION BAR (Customer view) -->
+  <nav class="bottom-nav" id="customerBottomNav" style="display:none;">
+    <button class="bottom-tab active" id="tabApollo" onclick="App.switchCompanyTab(1)" style="--active-color:#1769AA;">
+      <div class="tab-dot" style="background:#1769AA;"></div>
+      <span>Apollo</span>
+    </button>
+    <button class="bottom-tab" id="tabPathCare" onclick="App.switchCompanyTab(2)" style="--active-color:#008C95;">
+      <div class="tab-dot" style="background:#008C95;"></div>
+      <span>PathCare</span>
+    </button>
+    <button class="bottom-tab" id="tabPrimgen" onclick="App.switchCompanyTab(3)" style="--active-color:#6C4AB6;">
+      <div class="tab-dot" style="background:#6C4AB6;"></div>
+      <span>Primgen</span>
+    </button>
+    <button class="bottom-tab" id="tabCustomerBookings" onclick="App.showCustomerSubtab('myBookings')" style="--active-color:#2563eb;">
+      <div class="tab-dot" style="background:#2563eb;"></div>
+      <span>My Bookings</span>
+    </button>
+  </nav>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- CUSTOMER REGISTRATION MODAL WITH REAL OTP -->
+  <div id="registerModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Customer Registration</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <form id="registerForm" onsubmit="App.handleCustomerRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="regFullName" class="form-control" required placeholder="e.g. Ramesh Krishnan" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unique Username</label>
+          <input type="text" id="regUsername" class="form-control" required placeholder="e.g. ramesh_k" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">10-Digit Mobile Number (OTP Verified)</label>
+          <div class="input-group">
+            <input type="tel" id="regMobile" class="form-control" required placeholder="e.g. 9840123456" maxlength="10" />
+            <button type="button" id="sendOtpBtn" class="btn btn-secondary" onclick="App.sendRegistrationOtp()">Send OTP</button>
+          </div>
+        </div>
+        <div class="form-group" id="otpGroup" style="display:none;">
+          <label class="form-label">6-Digit Verification Code (OTP)</label>
+          <div class="input-group">
+            <input type="text" id="regOtpCode" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6" />
+            <button type="button" id="verifyOtpBtn" class="btn btn-primary" onclick="App.verifyRegistrationOtp()">Verify Code</button>
+          </div>
+          <small id="otpStatusMsg" style="color:var(--primary); font-weight:600; display:block; margin-top:4px;"></small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp Number</label>
+          <input type="tel" id="regWhatsapp" class="form-control" placeholder="e.g. 9840123456" maxlength="10" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email / Gmail Address</label>
+          <input type="email" id="regEmail" class="form-control" required placeholder="e.g. ramesh@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password (min 8 characters)</label>
+          <input type="password" id="regPassword" class="form-control" required placeholder="Choose a secure password" minlength="8" />
+        </div>
+        <button type="submit" id="regSubmitBtn" class="btn btn-primary" style="width:100%;" disabled>Verify Mobile to Register</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOOKING MODAL -->
+  <div id="bookingModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Book Diagnostic Home Collection</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <form id="bookingForm" onsubmit="App.handleCreateBooking(event)">
+        <input type="hidden" id="bookTestId" />
+        <input type="hidden" id="bookCompanyId" />
+
+        <div style="background:#f8fafc; padding:12px; border-radius:var(--radius-sm); margin-bottom:16px;">
+          <strong id="bookTestName">Test Name</strong>
+          <div id="bookCompanyLabel" style="font-size:12px; color:var(--text-muted);">Provider: Apollo Diagnostics</div>
+          <div style="font-size:18px; font-weight:800; color:var(--primary); margin-top:6px;" id="bookPrice">₹0.00</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Patient Full Name</label>
+          <input type="text" id="bookPatientName" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" id="bookPhone" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Home / Office Collection Address</label>
+          <textarea id="bookAddress" class="form-control" rows="2" required placeholder="Flat/Door no, Street, Landmark, Pincode"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Appointment Date</label>
+          <input type="date" id="bookDate" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Collection Slot</label>
+          <select id="bookSlot" class="form-control">
+            <option value="06:30 AM - 07:30 AM">06:30 AM - 07:30 AM (Early Fasting)</option>
+            <option value="07:30 AM - 08:30 AM" selected>07:30 AM - 08:30 AM (Preferred Fasting)</option>
+            <option value="08:30 AM - 09:30 AM">08:30 AM - 09:30 AM</option>
+            <option value="09:30 AM - 10:30 AM">09:30 AM - 10:30 AM</option>
+            <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM (Non-fasting)</option>
+            <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM (Evening)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Confirm Booking & Proceed to Payment</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- PAYMENT MODAL (Cash on Arrival + Online UPI) -->
+  <div id="paymentModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">💳 Choose Payment Method</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+
+      <input type="hidden" id="paymentBookingId" />
+      <div id="paymentAmountBanner" style="text-align:center; background:var(--primary-light,#e8f4ff); padding:12px; border-radius:10px; margin-bottom:18px;">
+        <div style="font-size:13px; color:#64748b; margin-bottom:2px;" id="paymentBookingRefDisplay">Booking Ref: —</div>
+        <div style="font-size:26px; font-weight:800; color:var(--primary,#1769AA);" id="paymentAmountDisplay">₹0.00</div>
+        <div style="font-size:12px; color:#64748b;">Payable Amount (incl. discounts)</div>
+      </div>
+
+      <!-- Method Selector Cards -->
+      <div id="paymentMethodCards" style="display:flex; gap:14px; margin-bottom:18px;">
+        <button type="button" id="btnMethodCash" onclick="App.selectPaymentMethod('cash_on_arrival')"
+          style="flex:1; padding:18px 10px; border:2px solid #e2e8f0; border-radius:12px; background:#fff; cursor:pointer; text-align:center; transition:all .2s;">
+          <div style="font-size:28px; margin-bottom:6px;">💵</div>
+          <div style="font-weight:700; font-size:14px;">Cash on Arrival</div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Pay collector at doorstep</div>
+        </button>
+        <button type="button" id="btnMethodOnline" onclick="App.selectPaymentMethod('upi_online')"
+          style="flex:1; padding:18px 10px; border:2px solid #e2e8f0; border-radius:12px; background:#fff; cursor:pointer; text-align:center; transition:all .2s;">
+          <div style="font-size:28px; margin-bottom:6px;">📱</div>
+          <div style="font-weight:700; font-size:14px;">Online UPI Payment</div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Pay via UPI / GPay / PhonePe</div>
+        </button>
+      </div>
+
+      <!-- CASH ON ARRIVAL SECTION -->
+      <div id="cashSection" style="display:none;">
+        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:16px; margin-bottom:16px; text-align:center;">
+          <div style="font-size:22px; margin-bottom:6px;">✅</div>
+          <div style="font-weight:700; font-size:15px; color:#16a34a; margin-bottom:4px;">Cash on Arrival Confirmed</div>
+          <div style="font-size:13px; color:#15803d;">Our collector will visit your address and collect the exact amount of <strong id="cashAmountLabel">₹0.00</strong> at your doorstep. Please keep the exact amount ready.</div>
+        </div>
+        <button type="button" class="btn btn-success" style="width:100%; font-size:15px;" onclick="App.submitCashOnArrival()">✔ Confirm Cash on Arrival</button>
+      </div>
+
+      <!-- ONLINE UPI SECTION -->
+      <div id="upiSection" style="display:none;">
+        <div class="qr-container" style="margin-bottom:14px;">
+          <img id="paymentQrImage" class="qr-image" src="" alt="Laboratory UPI QR Code" />
+          <div class="qr-upi-id" id="paymentUpiIdDisplay" style="margin-top:6px;">bloodlab@upi</div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Scan with any UPI app to pay exactly <span id="upiAmountInline" style="font-weight:700;">₹0.00</span></div>
+        </div>
+
+        <form id="paymentForm" onsubmit="App.handleSubmitPayment(event)">
+          <div class="form-group">
+            <label class="form-label">UPI Transaction Reference / Transfer ID *</label>
+            <input type="text" id="paymentUtrInput" class="form-control" placeholder="e.g. 428901928472" minlength="6" />
+            <small style="color:var(--text-muted); display:block; margin-top:3px;">Enter the 12-digit UTR / Txn ID shown in your UPI app after payment.</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload Payment Receipt / Screenshot *</label>
+            <input type="file" id="paymentReceiptFile" class="form-control" accept="image/*" style="padding:6px;" />
+            <small style="color:var(--text-muted); display:block; margin-top:3px;">Attach a screenshot of the payment confirmation from your UPI app or bank. (Max 3 MB)</small>
+          </div>
+          <div id="receiptPreviewWrap" style="display:none; margin-bottom:10px;">
+            <img id="receiptPreviewImg" style="max-width:100%; max-height:160px; border-radius:8px; border:1.5px solid #e2e8f0;" src="" alt="Receipt preview" />
+          </div>
+          <small style="display:block; color:#dc2626; margin-bottom:12px;">⚠️ <b>Verification Policy:</b> Payment stays PENDING until an Admin verifies your UTR and receipt against bank records. Screenshots alone are never final confirmation.</small>
+          <button type="submit" class="btn btn-primary" style="width:100%; font-size:15px;">📤 Submit Payment Proof</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLE SPECIFIC HELP MODAL -->
+  <div id="helpModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:620px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="helpModalTitle">BloodLab Guide & Instructions</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <div id="helpModalBody" style="font-size:13.5px; line-height:1.6; color:#334155;">
+        <!-- Loaded dynamically from /api/help/<role> -->
+      </div>
+      <button class="btn btn-outline" style="width:100%; margin-top:20px;" onclick="App.closeModals()">Got it</button>
+    </div>
+  </div>
+
+  <!-- ADD COMPANY MODAL (Admin) -->
+  <div id="addCompanyModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Diagnostic Laboratory</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <form id="addCompanyForm" onsubmit="App.handleCreateCompany(event)">
+        <div class="form-group">
+          <label class="form-label">Laboratory Company Name</label>
+          <input type="text" id="newCompanyName" class="form-control" required placeholder="e.g. Metropolis Healthcare" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Theme / Brand Colour</label>
+          <input type="color" id="newCompanyColor" class="form-control" value="#1769aa" style="height:44px; padding:4px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Logo URL (or Base64 data)</label>
+          <input type="text" id="newCompanyLogoUrl" class="form-control" placeholder="https://example.com/logo.png" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Laboratory UPI ID for Payments</label>
+          <input type="text" id="newCompanyUpi" class="form-control" value="bloodlab@upi" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Helpline Phone & Email</label>
+          <div class="input-group">
+            <input type="tel" id="newCompanyPhone" class="form-control" placeholder="+91 1800-425-0011" />
+            <input type="email" id="newCompanyEmail" class="form-control" placeholder="care@lab.com" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Create Laboratory Profile</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT COMPANY PRICING MODAL (Admin) -->
+  <div id="editPricingModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="editPricingTitle">Configure Test Pricing</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <form id="editPricingForm" onsubmit="App.handleSaveTestPricing(event)">
+        <input type="hidden" id="priceEditCompanyId" />
+        <input type="hidden" id="priceEditTestId" />
+
+        <div class="form-group">
+          <label class="form-label">List Price (₹)</label>
+          <input type="number" step="0.01" id="priceEditPrice" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Discount Percentage (%)</label>
+          <input type="number" step="0.1" id="priceEditDiscount" class="form-control" value="0.0" min="0" max="100" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sample Tube Required</label>
+          <input type="text" id="priceEditSample" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Patient Preparation Instructions</label>
+          <textarea id="priceEditPrep" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Availability Status</label>
+          <select id="priceEditAvailable" class="form-control">
+            <option value="1">Available for Booking</option>
+            <option value="0">Temporarily Unavailable</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Save Configuration</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD COLLECTOR MODAL (Admin) -->
+  <div id="addCollectorModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Phlebotomist Account</h3>
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <form id="addCollectorForm" onsubmit="App.handleCreateCollector(event)">
+        <div class="form-group">
+          <label class="form-label">Phlebotomist Staff Name</label>
+          <input type="text" id="collectorStaffName" class="form-control" required placeholder="e.g. Ramesh Kumar" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unique Username</label>
+          <input type="text" id="collectorUsername" class="form-control" required placeholder="e.g. collector_ramesh" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Temporary Password (min 8 chars)</label>
+          <input type="password" id="collectorTempPass" class="form-control" required minlength="8" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" id="collectorPhone" class="form-control" placeholder="+91 9840000000" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Create Collector Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast">Notification message</div>
+
+  <!-- Leaflet JS for live map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>

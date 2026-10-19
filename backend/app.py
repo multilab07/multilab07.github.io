@@ -15,8 +15,17 @@ import qrcode
 from db import connect, init_and_migrate_db
 from pdf_receipt import generate_pdf_receipt
 
-app = Flask(__name__, static_folder="../frontend", static_url_path="")
+app = Flask(__name__, static_folder="frontend", static_url_path="")
 CORS(app)
+
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")
+
+@app.errorhandler(404)
+def not_found(e):
+    return app.send_static_file("index.html")
+
 
 JWT_ALGORITHM = "HS256"
 JWT_LIFETIME_MINUTES = 120
