@@ -2210,6 +2210,30 @@ const App = (function () {
     });
   }
 
+  let deferredInstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
+
+  function showInstallAppModal() {
+    document.getElementById("installAppModal").style.display = "flex";
+  }
+
+  async function triggerPwaInstall() {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice && choice.outcome === "accepted") {
+        showToast("MultiLab07 installed successfully!");
+        closeModals();
+      }
+      deferredInstallPrompt = null;
+    } else {
+      showToast("To install on mobile: tap your browser menu (⋮) and select 'Install app' or 'Add to Home Screen'.");
+    }
+  }
+
   function togglePassword(inputId) {
     const el = document.getElementById(inputId);
     if (el) el.type = el.type === "password" ? "text" : "password";
@@ -2221,6 +2245,8 @@ const App = (function () {
     quickLogin,
     navigateHome,
     showAuthModal,
+    showInstallAppModal,
+    triggerPwaInstall,
     setLoginRole,
     handleLogin,
     logout,

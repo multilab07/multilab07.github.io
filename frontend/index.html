@@ -8,14 +8,25 @@
   <meta name="keywords" content="multilab07, multilab, multi lab 07, multilab07.com, blood test online, pathology lab, diagnostic center, home collection, CBC test, thyroid test" />
   <meta name="author" content="MultiLab07" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-  <link rel="canonical" href="https://labt4101-wq.github.io/multilab07/" />
+  <link rel="canonical" href="https://multilab07.github.io/" />
+
+  <!-- PWA & Mobile App Support -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0284c7" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MultiLab07" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/favicon.png" />
 
   <!-- OpenGraph / Social Search Tags -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="MultiLab07 — Verified Diagnostic & Home Collection Platform" />
   <meta property="og:description" content="Book affordable pathology and blood tests online with certified home sample collection." />
-  <meta property="og:url" content="https://labt4101-wq.github.io/multilab07/" />
+  <meta property="og:url" content="https://multilab07.github.io/" />
   <meta property="og:site_name" content="MultiLab07" />
+  <meta property="og:image" content="https://multilab07.github.io/icons/icon-512.png" />
 
   <!-- Structured Google Knowledge Graph Schema -->
   <script type="application/ld+json">
@@ -24,7 +35,7 @@
     "@type": "DiagnosticLab",
     "name": "MultiLab07",
     "alternateName": ["multilab07", "MultiLab 07", "MultiLab", "multilab07.com"],
-    "url": "https://labt4101-wq.github.io/multilab07/",
+    "url": "https://multilab07.github.io/",
     "description": "MultiLab07 verified multi-company diagnostic and home blood collection network.",
     "telephone": "+91-98401-23456",
     "priceRange": "₹₹",
@@ -65,6 +76,11 @@
 
       <!-- Help icon button at top-right of each role-specific dashboard -->
       <button id="helpBtn" class="help-btn" title="Dashboard Instructions & Help" onclick="App.openHelpModal()">?</button>
+
+      <!-- App Install / Download button -->
+      <button id="installAppNavBtn" class="btn btn-outline" style="padding:6px 12px; font-size:12.5px; font-weight:700; border-color:var(--primary); color:var(--primary); display:inline-flex; align-items:center; gap:5px;" onclick="App.showInstallAppModal()">
+        <span>📲</span> <span>App</span>
+      </button>
 
       <!-- Auth actions -->
       <button id="signInNavBtn" class="btn btn-primary" onclick="App.showAuthModal()">Sign in</button>
@@ -859,11 +875,68 @@
     </div>
   </div>
 
+  <!-- APP INSTALL & PLAY STORE DOWNLOAD MODAL -->
+  <div id="installAppModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:500px; text-align:center;">
+      <div class="modal-header" style="justify-content:flex-end;">
+        <button class="modal-close" onclick="App.closeModals()">✕</button>
+      </div>
+      <div style="margin-top:-10px; margin-bottom:14px;">
+        <img src="icons/icon-192.png" alt="MultiLab07 App" style="width:76px; height:76px; border-radius:18px; box-shadow:0 8px 24px rgba(2,132,199,0.3);" />
+        <h3 style="margin-top:12px; margin-bottom:4px; font-size:20px; font-weight:800;">MultiLab07 Mobile App</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin:0;">Official Android & PWA App for Blood Tests & Diagnostics</p>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; text-align:left;">
+        <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;">
+          <div style="font-size:24px;">⚡</div>
+          <div>
+            <strong style="font-size:14px; display:block;">1-Tap Direct Install (Any Phone)</strong>
+            <span style="font-size:12px; color:#64748b;">Install instantly on your Android home screen with zero storage overhead. Works offline!</span>
+          </div>
+        </div>
+        <button id="pwaInstallBtn" class="btn btn-primary" style="width:100%; font-size:14px; font-weight:700; padding:10px;" onclick="App.triggerPwaInstall()">
+          ➕ Install MultiLab07 on this Device
+        </button>
+      </div>
+
+      <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:16px; margin-bottom:16px; text-align:left;">
+        <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:10px;">
+          <div style="font-size:24px;">📦</div>
+          <div>
+            <strong style="font-size:14px; display:block; color:#166534;">Official Android Package (.APK / .AAB)</strong>
+            <span style="font-size:12px; color:#15803d;">Download the signed release APK or Google Play Store Bundle (.AAB).</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <a href="android-package/app-release-signed.apk" id="apkDownloadLink" download="multilab07-app-release.apk" class="btn btn-outline" style="flex:1; text-align:center; font-size:13px; font-weight:700; background:#fff; text-decoration:none; padding:8px 6px;">
+            📥 Download APK
+          </a>
+          <a href="android-package/app-release.aab" id="aabDownloadLink" download="multilab07-app-release.aab" class="btn btn-outline" style="flex:1; text-align:center; font-size:13px; font-weight:700; background:#fff; text-decoration:none; padding:8px 6px;">
+            🏪 Play Store (.AAB)
+          </a>
+        </div>
+      </div>
+
+      <div style="font-size:12px; color:#64748b; line-height:1.5; text-align:center;">
+        Google Play Package ID: <code>com.multilab07.app</code> • Version 1.0.0<br/>
+        Compatible with Android 8.0 through Android 15+
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toast">Notification message</div>
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(console.warn);
+      });
+    }
+  </script>
 </body>
 </html>
