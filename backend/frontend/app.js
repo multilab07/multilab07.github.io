@@ -93,10 +93,10 @@ const App = (function () {
   const MOCK_STORAGE_USERS = "multilab07_custom_users";
 
   const MOCK_COMPANIES = [
-    { id: 1, name: "MultiLab07 Flagship Hub", theme_color: "#0284c7", upi_id: "multilab07@upi", phone: "+91 98401 23456", email: "care@multilab07.com", address: "Central Diagnostics Tower, Bangalore" },
-    { id: 2, name: "Apollo Diagnostics", theme_color: "#16a34a", upi_id: "apollo@upi", phone: "+91 1800 102 0288", email: "support@apollodiagnostics.in", address: "NABL Accredited Reference Hub, Chennai" },
-    { id: 3, name: "Dr. Lal PathLabs", theme_color: "#f59e0b", upi_id: "lalpath@upi", phone: "+91 1800 111 744", email: "care@lalpathlabs.com", address: "National Reference Lab, Gurgaon" },
-    { id: 4, name: "Thyrocare Technologies", theme_color: "#8b5cf6", upi_id: "thyrocare@upi", phone: "+91 98700 66666", email: "info@thyrocare.com", address: "MIDC Turbhe, Navi Mumbai" }
+    { id: 1, name: "MultiLab07 Flagship Hub", brand_color: "#0284c7", theme_color: "#0284c7", upi_id: "multilab07@upi", contact_phone: "+91 98401 23456", contact_email: "care@multilab07.com", address: "Central Diagnostics Tower, Bangalore", is_primary_tab: true, active: true },
+    { id: 2, name: "Apollo Diagnostics", brand_color: "#16a34a", theme_color: "#16a34a", upi_id: "apollo@upi", contact_phone: "+91 1800 102 0288", contact_email: "support@apollodiagnostics.in", address: "NABL Accredited Reference Hub, Chennai", is_primary_tab: true, active: true },
+    { id: 3, name: "Dr. Lal PathLabs", brand_color: "#f59e0b", theme_color: "#f59e0b", upi_id: "lalpath@upi", contact_phone: "+91 1800 111 744", contact_email: "care@lalpathlabs.com", address: "National Reference Lab, Gurgaon", is_primary_tab: true, active: true },
+    { id: 4, name: "Thyrocare Technologies", brand_color: "#8b5cf6", theme_color: "#8b5cf6", upi_id: "thyrocare@upi", contact_phone: "+91 98700 66666", contact_email: "info@thyrocare.com", address: "MIDC Turbhe, Navi Mumbai", is_primary_tab: false, active: true }
   ];
 
   const MOCK_CATEGORIES = [
@@ -104,24 +104,246 @@ const App = (function () {
   ];
 
   const MOCK_TESTS = [
-    { id: 1, company_id: 1, name: "Complete Blood Count (CBC) with ESR", code: "CBC-01", category: "Blood Tests", price: 299, original_price: 550, discount_pct: 45, preparation: "No fasting required. Hydrate normally.", sample_type: "Whole Blood (EDTA)", tat_hours: 6 },
-    { id: 2, company_id: 1, name: "Fasting Blood Glucose (FBS)", code: "GLU-01", category: "Diabetes & Sugar", price: 99, original_price: 200, discount_pct: 50, preparation: "Strict 8-10 hours overnight fasting required.", sample_type: "Fluoride Plasma", tat_hours: 4 },
-    { id: 3, company_id: 1, name: "HbA1c (Glycated Hemoglobin)", code: "HBA1C", category: "Diabetes & Sugar", price: 399, original_price: 700, discount_pct: 43, preparation: "Fasting not strictly required.", sample_type: "Whole Blood (EDTA)", tat_hours: 6 },
-    { id: 4, company_id: 1, name: "Thyroid Profile Total (T3, T4, TSH)", code: "THY-03", category: "Thyroid Profile", price: 349, original_price: 750, discount_pct: 53, preparation: "Early morning fasting sample recommended.", sample_type: "Serum", tat_hours: 8 },
-    { id: 5, company_id: 1, name: "Lipid Profile Comprehensive", code: "LIPID-FULL", category: "Cardiac & Heart", price: 549, original_price: 1100, discount_pct: 50, preparation: "10-12 hours overnight fasting mandatory.", sample_type: "Serum", tat_hours: 8 },
-    { id: 6, company_id: 1, name: "Liver Function Test (LFT with Enzymes)", code: "LFT-01", category: "Liver Function (LFT)", price: 499, original_price: 950, discount_pct: 47, preparation: "8 hours fasting. Avoid heavy fatty dinner.", sample_type: "Serum", tat_hours: 6 },
-    { id: 7, company_id: 1, name: "Kidney Function Test (KFT with Electrolytes)", code: "KFT-01", category: "Kidney Function (KFT)", price: 549, original_price: 1000, discount_pct: 45, preparation: "Overnight fasting recommended.", sample_type: "Serum", tat_hours: 6 },
-    { id: 8, company_id: 1, name: "Vitamin D (25-Hydroxy) Deficiency Test", code: "VIT-D3", category: "Vitamins & Minerals", price: 699, original_price: 1600, discount_pct: 56, preparation: "No special diet or fasting required.", sample_type: "Serum", tat_hours: 12 },
-    { id: 9, company_id: 1, name: "Vitamin B12 (Cyanocobalamin)", code: "VIT-B12", category: "Vitamins & Minerals", price: 599, original_price: 1300, discount_pct: 54, preparation: "Overnight fasting preferred.", sample_type: "Serum", tat_hours: 8 },
-    { id: 10, company_id: 1, name: "MultiLab07 Executive Platinum Health Check (84 Tests)", code: "MLB-PLATINUM", category: "Complete Health Packages", price: 1499, original_price: 4999, discount_pct: 70, preparation: "10-12 hours fasting. Free home collection included.", sample_type: "Blood & Urine", tat_hours: 12 },
-    { id: 11, company_id: 1, name: "Cardiac Risk Assessment Panel (Troponin + hsCRP + Lipid)", code: "CARDIO-01", category: "Cardiac & Heart", price: 1199, original_price: 2400, discount_pct: 50, preparation: "10 hours fasting.", sample_type: "Serum", tat_hours: 8 },
-    { id: 12, company_id: 1, name: "Dengue NS1 Antigen + IgG & IgM Antibodies", code: "DENGUE-01", category: "Blood Tests", price: 649, original_price: 1200, discount_pct: 46, preparation: "No fasting required. Immediate processing.", sample_type: "Serum", tat_hours: 4 },
-    { id: 13, company_id: 2, name: "Apollo Total Body Care (72 Parameters)", code: "APOLLO-72", category: "Complete Health Packages", price: 1599, original_price: 4500, discount_pct: 64, preparation: "10-12 hours overnight fasting.", sample_type: "Blood & Urine", tat_hours: 12 },
-    { id: 14, company_id: 2, name: "Complete Blood Count (CBC) with Peripheral Smear", code: "CBC-APOLLO", category: "Blood Tests", price: 320, original_price: 600, discount_pct: 46, preparation: "No fasting required.", sample_type: "Whole Blood", tat_hours: 6 },
-    { id: 15, company_id: 2, name: "Thyroid Ultrasound & TSH Duo", code: "THY-APOLLO", category: "Thyroid Profile", price: 420, original_price: 850, discount_pct: 50, preparation: "Morning sample.", sample_type: "Serum", tat_hours: 8 },
-    { id: 16, company_id: 3, name: "Swasthfit Super Health Checkup", code: "LAL-SUPER", category: "Complete Health Packages", price: 1799, original_price: 5200, discount_pct: 65, preparation: "12 hours fasting.", sample_type: "Blood & Urine", tat_hours: 12 },
-    { id: 17, company_id: 3, name: "Diabetic Kidney & Retina Care Profile", code: "LAL-DIAB", category: "Diabetes & Sugar", price: 899, original_price: 1800, discount_pct: 50, preparation: "Fasting required.", sample_type: "Serum & Urine", tat_hours: 8 },
-    { id: 18, company_id: 4, name: "Aarogyam C Comprehensive Package (64 Tests)", code: "THY-AAROGYAM", category: "Complete Health Packages", price: 1299, original_price: 3600, discount_pct: 64, preparation: "10-12 hours fasting.", sample_type: "Blood & Urine", tat_hours: 14 }
+    {
+      id: 1,
+      company_id: 1,
+      name: "Complete Blood Count (CBC) with ESR",
+      code: "CBC-01",
+      category: "Blood Tests",
+      price: 550,
+      discount_percent: 45,
+      final_price: 299,
+      description: "Hemoglobin, RBC, WBC total & differential count, platelets, and ESR rate.",
+      preparation: "No fasting required. Hydrate normally.",
+      sample_type: "Whole Blood (EDTA)",
+      turnaround_time: "6 hours",
+      is_available: 1
+    },
+    {
+      id: 2,
+      company_id: 1,
+      name: "Fasting Blood Glucose (FBS)",
+      code: "GLU-01",
+      category: "Diabetes & Sugar",
+      price: 200,
+      discount_percent: 50,
+      final_price: 99,
+      description: "Accurate blood sugar evaluation to screen and monitor prediabetes and diabetes.",
+      preparation: "Strict 8-10 hours overnight fasting required. Water is allowed.",
+      sample_type: "Fluoride Plasma",
+      turnaround_time: "4 hours",
+      is_available: 1
+    },
+    {
+      id: 3,
+      company_id: 1,
+      name: "HbA1c (Glycated Hemoglobin)",
+      code: "HBA1C",
+      category: "Diabetes & Sugar",
+      price: 700,
+      discount_percent: 43,
+      final_price: 399,
+      description: "Gold standard test measuring average blood glucose levels over past 3 months.",
+      preparation: "Fasting not strictly required.",
+      sample_type: "Whole Blood (EDTA)",
+      turnaround_time: "6 hours",
+      is_available: 1
+    },
+    {
+      id: 4,
+      company_id: 1,
+      name: "Thyroid Profile Total (T3, T4, TSH)",
+      code: "THY-03",
+      category: "Thyroid Profile",
+      price: 750,
+      discount_percent: 53,
+      final_price: 349,
+      description: "Evaluates hyperthyroidism, hypothyroidism, and endocrine gland health.",
+      preparation: "Early morning fasting sample recommended.",
+      sample_type: "Serum",
+      turnaround_time: "8 hours",
+      is_available: 1
+    },
+    {
+      id: 5,
+      company_id: 1,
+      name: "Lipid Profile Comprehensive",
+      code: "LIPID-FULL",
+      category: "Cardiac & Heart",
+      price: 1100,
+      discount_percent: 50,
+      final_price: 549,
+      description: "Total Cholesterol, Triglycerides, HDL, LDL, VLDL, and Cardiac Risk Ratio.",
+      preparation: "10-12 hours overnight fasting mandatory.",
+      sample_type: "Serum",
+      turnaround_time: "8 hours",
+      is_available: 1
+    },
+    {
+      id: 6,
+      company_id: 1,
+      name: "Liver Function Test (LFT with Enzymes)",
+      code: "LFT-01",
+      category: "Liver Function (LFT)",
+      price: 950,
+      discount_percent: 47,
+      final_price: 499,
+      description: "SGOT/AST, SGPT/ALT, Bilirubin Total/Direct, Alkaline Phosphatase, Protein.",
+      preparation: "8 hours fasting. Avoid heavy fatty dinner prior to test.",
+      sample_type: "Serum",
+      turnaround_time: "6 hours",
+      is_available: 1
+    },
+    {
+      id: 7,
+      company_id: 1,
+      name: "Kidney Function Test (KFT with Electrolytes)",
+      code: "KFT-01",
+      category: "Kidney Function (KFT)",
+      price: 1000,
+      discount_percent: 45,
+      final_price: 549,
+      description: "Serum Creatinine, Blood Urea Nitrogen (BUN), Uric Acid, Sodium, Potassium.",
+      preparation: "Overnight fasting recommended.",
+      sample_type: "Serum",
+      turnaround_time: "6 hours",
+      is_available: 1
+    },
+    {
+      id: 8,
+      company_id: 1,
+      name: "Vitamin D (25-Hydroxy) Deficiency Test",
+      code: "VIT-D3",
+      category: "Vitamins & Minerals",
+      price: 1600,
+      discount_percent: 56,
+      final_price: 699,
+      description: "Measures 25-OH Vitamin D for bone density, muscle weakness, and immunity.",
+      preparation: "No special diet or fasting required.",
+      sample_type: "Serum",
+      turnaround_time: "12 hours",
+      is_available: 1
+    },
+    {
+      id: 9,
+      company_id: 1,
+      name: "Vitamin B12 (Cyanocobalamin)",
+      code: "VIT-B12",
+      category: "Vitamins & Minerals",
+      price: 1300,
+      discount_percent: 54,
+      final_price: 599,
+      description: "Assesses nerve health, red blood cell synthesis, and brain cognitive function.",
+      preparation: "Overnight fasting preferred.",
+      sample_type: "Serum",
+      turnaround_time: "8 hours",
+      is_available: 1
+    },
+    {
+      id: 10,
+      company_id: 1,
+      name: "MultiLab07 Executive Platinum Health Check (84 Tests)",
+      code: "MLB-PLATINUM",
+      category: "Complete Health Packages",
+      price: 4999,
+      discount_percent: 70,
+      final_price: 1499,
+      description: "Full body screening: CBC, Lipid, Liver, Kidney, Thyroid, HbA1c, Vit D & B12 + Urine Routine.",
+      preparation: "10-12 hours fasting. Free phlebotomist home collection included.",
+      sample_type: "Blood & Urine",
+      turnaround_time: "12 hours",
+      is_available: 1
+    },
+    {
+      id: 11,
+      company_id: 1,
+      name: "Cardiac Risk Assessment Panel (Troponin + hsCRP + Lipid)",
+      code: "CARDIO-01",
+      category: "Cardiac & Heart",
+      price: 2400,
+      discount_percent: 50,
+      final_price: 1199,
+      description: "High-sensitivity CRP, Troponin I, and complete lipid profile for heart evaluation.",
+      preparation: "10 hours fasting.",
+      sample_type: "Serum",
+      turnaround_time: "8 hours",
+      is_available: 1
+    },
+    {
+      id: 12,
+      company_id: 1,
+      name: "Dengue NS1 Antigen + IgG & IgM Antibodies",
+      code: "DENGUE-01",
+      category: "Blood Tests",
+      price: 1200,
+      discount_percent: 46,
+      final_price: 649,
+      description: "Rapid differential detection for acute dengue viral fever and immune response.",
+      preparation: "No fasting required. Immediate lab processing.",
+      sample_type: "Serum",
+      turnaround_time: "4 hours",
+      is_available: 1
+    },
+    {
+      id: 13,
+      company_id: 2,
+      name: "Apollo Total Body Care (72 Parameters)",
+      code: "APOLLO-72",
+      category: "Complete Health Packages",
+      price: 4500,
+      discount_percent: 64,
+      final_price: 1599,
+      description: "Full preventive health screen with Apollo certified pathologist sign-off.",
+      preparation: "10-12 hours overnight fasting.",
+      sample_type: "Blood & Urine",
+      turnaround_time: "12 hours",
+      is_available: 1
+    },
+    {
+      id: 14,
+      company_id: 2,
+      name: "Complete Blood Count (CBC) with Peripheral Smear",
+      code: "CBC-APOLLO",
+      category: "Blood Tests",
+      price: 600,
+      discount_percent: 46,
+      final_price: 320,
+      description: "Automated hematology cell counter profile with microscopic smear examination.",
+      preparation: "No fasting required.",
+      sample_type: "Whole Blood",
+      turnaround_time: "6 hours",
+      is_available: 1
+    },
+    {
+      id: 15,
+      company_id: 3,
+      name: "Swasthfit Super Health Checkup",
+      code: "LAL-SUPER",
+      category: "Complete Health Packages",
+      price: 5200,
+      discount_percent: 65,
+      final_price: 1799,
+      description: "National reference package covering liver, heart, sugar, kidney, and thyroid.",
+      preparation: "12 hours fasting.",
+      sample_type: "Blood & Urine",
+      turnaround_time: "12 hours",
+      is_available: 1
+    },
+    {
+      id: 16,
+      company_id: 4,
+      name: "Aarogyam C Comprehensive Package (64 Tests)",
+      code: "THY-AAROGYAM",
+      category: "Complete Health Packages",
+      price: 3600,
+      discount_percent: 64,
+      final_price: 1299,
+      description: "Thyrocare signature preventive profile with comprehensive hormone & lipid assays.",
+      preparation: "10-12 hours fasting.",
+      sample_type: "Blood & Urine",
+      turnaround_time: "14 hours",
+      is_available: 1
+    }
   ];
 
   function getStoredBookings() {
@@ -674,15 +896,18 @@ const App = (function () {
 
     const filtered = allTests.filter(t => {
       const matchesCat = currentCategory === "All" || t.category === currentCategory;
+      const desc = (t.description || "").toLowerCase();
+      const name = (t.name || "").toLowerCase();
+      const code = (t.code || "").toLowerCase();
       const matchesSearch = !searchQuery ||
-        t.name.toLowerCase().includes(searchQuery) ||
-        t.code.toLowerCase().includes(searchQuery) ||
-        t.description.toLowerCase().includes(searchQuery);
+        name.includes(searchQuery) ||
+        code.includes(searchQuery) ||
+        desc.includes(searchQuery);
       return matchesCat && matchesSearch;
     });
 
     if (filtered.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">No diagnostic tests found matching your criteria.</div>';
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted); font-size:15px; font-weight:600;">No diagnostic tests found matching your criteria.</div>';
       return;
     }
 
@@ -690,22 +915,26 @@ const App = (function () {
       const card = document.createElement("div");
       card.className = "test-card";
 
-      const hasDiscount = t.discount_percent > 0;
+      const discountPercent = Number(t.discount_percent || 0);
+      const hasDiscount = discountPercent > 0;
+      const finalPrice = Number(t.final_price !== undefined ? t.final_price : (t.price || 0));
+      const originalPrice = Number(t.price || (finalPrice * 1.5));
+
       card.innerHTML = `
-        ${hasDiscount ? `<span class="test-badge">${t.discount_percent}% OFF</span>` : ""}
+        ${hasDiscount ? `<span class="test-badge">${discountPercent}% OFF</span>` : ""}
         <div>
           <h3 class="test-title">${t.name}</h3>
-          <p class="test-desc">${t.description || "Comprehensive clinical pathology evaluation."}</p>
+          <p class="test-desc">${t.description || "Comprehensive clinical pathology evaluation by NABL accredited lab."}</p>
           <div class="test-meta">
-            <div class="test-meta-row"><span>🧪 <b>Sample:</b> ${t.sample_type}</span></div>
-            <div class="test-meta-row"><span>⏱ <b>Turnaround:</b> ${t.turnaround_time}</span></div>
-            <div class="test-meta-row"><span>📋 <b>Prep:</b> ${t.preparation}</span></div>
+            <div class="test-meta-row"><span>🧪 <b>Sample:</b> ${t.sample_type || "Whole Blood"}</span></div>
+            <div class="test-meta-row"><span>⏱ <b>Turnaround:</b> ${t.turnaround_time || "6-12 hours"}</span></div>
+            <div class="test-meta-row"><span>📋 <b>Prep:</b> ${t.preparation || "No special preparation needed"}</span></div>
           </div>
         </div>
         <div class="test-footer">
           <div class="price-box">
-            <span class="final-price">₹${t.final_price.toFixed(2)}</span>
-            ${hasDiscount ? `<span class="original-price">₹${t.price.toFixed(2)}</span>` : ""}
+            <span class="final-price">₹${finalPrice.toFixed(2)}</span>
+            ${hasDiscount ? `<span class="original-price">₹${originalPrice.toFixed(2)}</span>` : ""}
           </div>
           <button class="btn btn-primary" onclick="App.openBookingModal(${t.id})">Book Home Collection</button>
         </div>
