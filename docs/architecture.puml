@@ -1,0 +1,76 @@
+@startuml BloodLabArchitecture
+title BloodLab Application Architecture — Android & Laptop Web
+
+package "Client Layer" {
+    component "Native Android App\n(Kotlin + Jetpack Compose)" as AndroidApp {
+        port "Material 3 UI"
+        port "Location Service"
+        port "Bottom Navigation"
+    }
+    component "Responsive Laptop Website\n(SPA + Dashboards)" as WebApp {
+        port "Customer Portal"
+        port "Collector Portal"
+        port "Admin Dashboard"
+    }
+}
+
+package "API Gateway & Application Server" {
+    component "Flask RESTful Server (WSGI)" as BackendAPI {
+        port "/api/auth/*" as AuthRoutes
+        port "/api/companies/*" as CompanyRoutes
+        port "/api/tests/*" as TestRoutes
+        port "/api/bookings/*" as BookingRoutes
+        port "/api/collector/*" as CollectorRoutes
+        port "/api/admin/*" as AdminRoutes
+    }
+}
+
+package "Core Business Logic" {
+    component "Auth & OTP Manager\n(HMAC JWT HS256)" as AuthManager
+    component "Catalog & Pricing Engine\n(Independent Tenant Pricing)" as PricingEngine
+    component "Immutable Booking Engine\n(Historical Snapshots)" as BookingEngine
+    component "UPI Payment & Reconciliation\n(Anti-duplicate UTR Verification)" as PaymentEngine
+    component "PDF Receipt Generator\n(ReportLab + Dynamic QR)" as PdfEngine
+    component "Live Transit Tracker\n(Active-trip GPS Policy)" as TransitTracker
+}
+
+database "Persistent SQLite Database (lab.db)" as Database {
+    entity "staff_users" as StaffTable
+    entity "customers" as CustomerTable
+    entity "otp_verifications" as OtpTable
+    entity "companies" as CompanyTable
+    entity "tests" as TestMasterTable
+    entity "company_tests" as CompanyTestTable
+    entity "bookings" as BookingTable
+    entity "booking_events" as EventTable
+}
+
+AndroidApp --> BackendAPI : JSON / HTTPS
+WebApp --> BackendAPI : JSON / HTTPS
+
+BackendAPI --> AuthManager
+BackendAPI --> PricingEngine
+BackendAPI --> BookingEngine
+BackendAPI --> PaymentEngine
+BackendAPI --> PdfEngine
+BackendAPI --> TransitTracker
+
+AuthManager --> StaffTable
+AuthManager --> CustomerTable
+AuthManager --> OtpTable
+
+PricingEngine --> CompanyTable
+PricingEngine --> TestMasterTable
+PricingEngine --> CompanyTestTable
+
+BookingEngine --> BookingTable
+BookingEngine --> EventTable
+
+PaymentEngine --> BookingTable
+PaymentEngine --> EventTable
+
+TransitTracker --> BookingTable
+
+PdfEngine ..> BookingTable : Reads Verified Paid Snapshots
+
+@enduml

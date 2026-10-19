@@ -1,0 +1,65 @@
+@startuml BookingAndPaymentSequence
+title BloodLab Booking, Collector Workflow & Verified UPI Payment Sequence
+
+actor "Customer" as Customer
+boundary "Mobile / Web Client" as Client
+control "BloodLab Backend API" as API
+database "SQLite (lab.db)" as DB
+actor "Authorised Admin" as Admin
+actor "Phlebotomist (Collector)" as Collector
+
+== 1. Registration with Real OTP Verification ==
+Customer -> Client: Enter mobile number
+Client -> API: POST /api/auth/otp/send {"phone": "9840123456"}
+API -> DB: Save 6-digit OTP (10 min expiry)
+API --> Client: {"message": "OTP sent", "dev_otp": "XXXXXX"}
+Customer -> Client: Enter OTP + Name + WhatsApp + Email + Password
+Client -> API: POST /api/auth/customer/register
+API -> DB: Verify OTP record & insert Customer
+API --> Client: Customer JWT (role='customer')
+
+== 2. Booking with Immutable Snapshot ==
+Customer -> Client: Select Apollo Diagnostics -> CBC (₹315.00)
+Customer -> Client: Select collection slot & home address
+Client -> API: POST /api/bookings
+API -> DB: Store immutable snapshot of company, test, discounts & net price
+API -> DB: Generate Booking Ref (BL-XXXX) and Invoice ID (INV-XXXX)
+API --> Client: Booking created (Status: UNPAID, Collection: Not Assigned)
+
+== 3. UPI QR Code Display & Payment Submission ==
+Client -> API: GET /api/bookings/{id}/payment-details
+API --> Client: Render dynamic UPI QR code + exact payable amount (₹315.00)
+Customer -> Client: Pay via UPI & enter 12-digit UTR reference
+Client -> API: POST /api/bookings/{id}/submit-payment {"transaction_reference": "UTR..."}
+API -> DB: Set payment_status = 'pending' (Awaiting Admin verification)
+API --> Client: Payment reference recorded
+
+== 4. Admin Payment Verification & Reconciliation ==
+Admin -> API: GET /api/admin/assignments
+API --> Admin: Display pending payments with submitted UTR
+Admin -> API: POST /api/admin/bookings/{id}/verify-payment {"action": "approve"}
+API -> DB: Update payment_status = 'paid', record timestamp & admin ID
+API -> DB: Log audit event
+
+== 5. Download Official Tax PDF Receipt ==
+Customer -> Client: Click "Download Receipt (PDF)"
+Client -> API: GET /api/bookings/{id}/receipt.pdf
+API -> DB: Verify payment_status == 'paid'
+API -> API: ReportLab compiles official PDF receipt with QR code
+API --> Client: Stream official PDF invoice
+
+== 6. Collector Assignment & Authorized GPS Tracking ==
+Admin -> API: POST /api/admin/bookings/{id}/assign {"collector_id": 2}
+API -> DB: Set collection_status = 'Assigned'
+Collector -> API: GET /api/collector/assignments
+Collector -> API: PATCH /api/collector/bookings/{id}/status {"status": "Accepted"}
+Collector -> API: PATCH /api/collector/bookings/{id}/status {"status": "On the Way"}
+note over Collector, API: GPS Tracking Activated ONLY during active trip
+loop Active Transit
+    Collector -> API: POST /api/collector/bookings/{id}/location {"latitude": 13.08, "longitude": 80.27}
+    Admin -> API: GET /api/admin/tracking (Plots live position on OpenStreetMap)
+end
+Collector -> API: PATCH /api/collector/bookings/{id}/status {"status": "Sample Collected"}
+note over Collector, API: GPS Tracking Terminated Immediately. Stored coordinates cleared.
+
+@enduml

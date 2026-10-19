@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.pytest_cache
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables & secrets
+.env
+
+# Android Build Outputs
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+
+# Local OS & IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

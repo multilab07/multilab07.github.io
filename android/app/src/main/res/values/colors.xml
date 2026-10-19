@@ -1,0 +1,8 @@
+<resources>
+    <color name="primary">#1769AA</color>
+    <color name="primary_dark">#0F4C81</color>
+    <color name="teal_pathcare">#008C95</color>
+    <color name="purple_primgen">#6C4AB6</color>
+    <color name="background">#F4F7FC</color>
+    <color name="white">#FFFFFF</color>
+</resources>
