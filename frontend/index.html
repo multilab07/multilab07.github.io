@@ -106,6 +106,7 @@
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
             <span class="company-switch-badge" id="heroBadge" style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); font-weight:700;">NABL Accredited Laboratory</span>
             <span id="heroVerifiedPill" style="background:#22c55e; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px;">✓ Verified Center</span>
+            <span style="background:rgba(255,255,255,0.25); color:#fff; font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.35);">📍 Validated Coverage: Pallikaranai to Tambaram</span>
           </div>
           <h2 id="heroTitle" style="margin:4px 0 8px; font-size:24px; font-weight:800; line-height:1.3;">Apollo Diagnostics</h2>
           <p id="heroSubtitle" style="font-size:13.5px; opacity:0.95; line-height:1.5; margin-bottom:12px;">
@@ -475,6 +476,9 @@
                   <span style="font-size:16px; margin-top:1px;">📍</span>
                   <div>
                     <strong>Location / Branch:</strong> Santhoshpuram, Chennai<br/>
+                    <div style="margin:4px 0 6px; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:6px 8px; font-size:11.5px; color:#14532d; font-weight:600;">
+                      🚐 <strong>Home Collection Valid:</strong> Pallikaranai ⇄ Medavakkam ⇄ Santhoshpuram ⇄ Gowrivakkam ⇄ Sembakkam ⇄ Selaiyur ⇄ Tambaram
+                    </div>
                     <a href="https://share.google/0cAngOv1ttXVozu1D" target="_blank" rel="noopener noreferrer" style="color:#15803d; font-weight:700; text-decoration:underline; display:inline-flex; align-items:center; gap:4px; margin-top:3px;">
                       <span>Open in Google Maps</span> ↗
                     </a>
@@ -849,8 +853,12 @@
           <input type="tel" id="bookPhone" class="form-control" required />
         </div>
         <div class="form-group">
-          <label class="form-label">Home / Office Collection Address</label>
-          <textarea id="bookAddress" class="form-control" rows="2" required placeholder="Flat/Door no, Street, Landmark, Pincode"></textarea>
+          <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Home / Office Collection Address</span>
+            <span style="font-size:11.5px; color:#16a34a; font-weight:700;">✓ Validated: Pallikaranai to Tambaram</span>
+          </label>
+          <textarea id="bookAddress" class="form-control" rows="2" required placeholder="Flat/Door no, Street, Landmark, Pincode (e.g. Pallikaranai, Medavakkam, Santhoshpuram, Selaiyur, Tambaram)"></textarea>
+          <span style="font-size:11.5px; color:#047857; margin-top:3px; display:block; font-weight:600;">📍 Free doorstep phlebotomist collection validated across the Pallikaranai to Tambaram corridor.</span>
         </div>
         <div class="form-group">
           <label class="form-label">Appointment Date</label>
@@ -1266,7 +1274,7 @@
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261020-v6"></script>
+  <script src="app.js?v=20261020-v7"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
