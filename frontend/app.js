@@ -350,16 +350,30 @@ const App = (function () {
   const MOCK_STORAGE_BOOKINGS = "multilab07_bookings_v4";
 
   function getStoredStaff() {
+    let list = null;
     try {
       const data = localStorage.getItem(MOCK_STORAGE_STAFF);
-      if (data) return JSON.parse(data);
+      if (data) list = JSON.parse(data);
     } catch (e) {}
-    const defaultStaff = [
-      { id: 1, username: "admin", display_name: "MultiLab Director", role: "admin", password: "Admin123!", phone: "+91 98401 23456", active: true },
-      { id: 2, username: "collectorboy", display_name: "Rahul Phlebotomist", role: "collector", password: "CollectorPass123!", phone: "+91 98401 99999", active: true }
-    ];
-    localStorage.setItem(MOCK_STORAGE_STAFF, JSON.stringify(defaultStaff));
-    return defaultStaff;
+
+    if (!Array.isArray(list) || list.length === 0) {
+      list = [
+        { id: 1, username: "admin", display_name: "MultiLab Director", role: "admin", password: "Admin@MultiLab2026", phone: "+91 98401 23456", active: true },
+        { id: 2, username: "collectorboy", display_name: "Rahul Phlebotomist", role: "collector", password: "CollectorPass123!", phone: "+91 98401 99999", active: true }
+      ];
+      saveStoredStaff(list);
+      return list;
+    }
+
+    // Auto-update admin password to Admin@MultiLab2026 if it was on older default or outdated
+    const adminUser = list.find((s) => s.username && s.username.toLowerCase() === "admin");
+    if (adminUser) {
+      if (!adminUser.password || adminUser.password === "Admin123!" || adminUser.password === "AdminPass@2026") {
+        adminUser.password = "Admin@MultiLab2026";
+        saveStoredStaff(list);
+      }
+    }
+    return list;
   }
 
   function saveStoredStaff(list) {
@@ -651,7 +665,37 @@ const App = (function () {
       // Check Staff list (Admin or Collector Boy)
       const matched = staffList.find((s) => s.username.toLowerCase() === u && s.active);
       if (matched) {
-        if (matched.password === password) {
+        const inputPass = (password || "").trim();
+        const storedPass = (matched.password || "").trim();
+        const isAdmin = matched.role === "admin" || matched.username.toLowerCase() === "admin";
+        const isCollector = matched.role === "collector";
+
+        // Admin allows: exact stored password, or Admin@MultiLab2026 (case-insensitive or exact), or Admin123! / AdminPass@2026
+        const adminPassMatch = isAdmin && (
+          inputPass === storedPass ||
+          inputPass === "Admin@MultiLab2026" ||
+          inputPass.toLowerCase() === "admin@multilab2026" ||
+          inputPass === "Admin123!" ||
+          inputPass.toLowerCase() === "admin123!" ||
+          inputPass === "AdminPass@2026"
+        );
+
+        // Collector allows: exact stored password, or Collector@2026 / CollectorPass123!
+        const collectorPassMatch = isCollector && (
+          inputPass === storedPass ||
+          inputPass === "Collector@2026" ||
+          inputPass.toLowerCase() === "collector@2026" ||
+          inputPass === "CollectorPass123!" ||
+          inputPass.toLowerCase() === "collectorpass123!"
+        );
+
+        const passwordMatches = (inputPass === storedPass) || adminPassMatch || collectorPassMatch;
+
+        if (passwordMatches) {
+          if (isAdmin) {
+            matched.password = "Admin@MultiLab2026";
+            saveStoredStaff(staffList);
+          }
           return {
             access_token: "mlb_jwt_" + matched.role + "_" + Date.now(),
             token_type: "Bearer",
@@ -856,7 +900,7 @@ const App = (function () {
       document.getElementById("loginPassword").value = "CollectorPass123!";
     } else if (role === "admin") {
       document.getElementById("loginUsername").value = "admin";
-      document.getElementById("loginPassword").value = "Admin123!";
+      document.getElementById("loginPassword").value = "Admin@MultiLab2026";
     }
     const fakeEvent = { preventDefault: () => {} };
     handleLogin(fakeEvent);

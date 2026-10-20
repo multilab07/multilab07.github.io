@@ -12,6 +12,14 @@ def test_full_login_suite_all_roles(client):
 
     # 1. Admin Login Tests
     # A. Valid Admin
+    res_off = client.post("/api/auth/login", json={
+        "username": "admin",
+        "password": "Admin@MultiLab2026",
+        "role": "admin"
+    })
+    assert res_off.status_code == 200
+    assert res_off.get_json()["role"] == "admin"
+
     res = client.post("/api/auth/login", json={
         "username": "admin",
         "password": "Admin123!",
