@@ -1243,16 +1243,32 @@ const App = (function () {
   }
 
   function scrollToContact() {
-    const el = document.getElementById("contactCentersSection") || document.getElementById("centersSection");
+    closeModals();
+    const custSec = document.getElementById("customerSection");
+    if (custSec && custSec.style.display === "none") {
+      switchRoleView("customer");
+    }
+    const el = document.getElementById("contactSection") ||
+               document.getElementById("contactCentersSection") ||
+               document.getElementById("centersSection");
     if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
   }
 
   function scrollToTests() {
+    closeModals();
+    const custSec = document.getElementById("customerSection");
+    if (custSec && custSec.style.display === "none") {
+      switchRoleView("customer");
+    }
     const el = document.getElementById("testsGrid") || document.getElementById("customerCatalogueView");
     if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
