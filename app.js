@@ -1235,10 +1235,16 @@ const App = (function () {
 
   function navigateHome() {
     closeModals();
-    if (currentUser) {
+    if (currentUser && currentUser.role !== "customer") {
       switchRoleView(currentUser.role);
     } else {
       switchRoleView("customer");
+      showCustomerSubtab("catalogue");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    const topEl = document.getElementById("heroCard") || document.body;
+    if (topEl) {
+      topEl.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
