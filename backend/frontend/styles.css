@@ -335,35 +335,81 @@ body::after {
   margin-top: 2px;
 }
 
-/* ---------------- TABS ---------------- */
+/* ---------------- TABS (High-Contrast & Fully Visible) ---------------- */
 .tabs-header {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 8px 10px;
+  margin-bottom: 24px;
   overflow-x: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  scrollbar-width: thin;
 }
 
 .tab-btn {
   padding: 10px 18px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9 !important; /* Crisp, ultra-high contrast light slate white text */
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
 }
 
 .tab-btn:hover {
-  color: var(--text-main);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Specific styling when tabs are inside light modal cards (e.g. Auth Modal) */
+.modal-card .tabs-header {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: none;
+}
+
+.modal-card .tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #334155 !important;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.modal-card .tab-btn:hover {
+  color: #0f172a !important;
+  background: #e2e8f0;
+}
+
+.modal-card .tab-btn.active {
+  color: #ffffff !important;
+  background: #0284c7 !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3) !important;
 }
 
 /* ---------------- STATS GRID ---------------- */
