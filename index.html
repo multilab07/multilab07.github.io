@@ -169,6 +169,22 @@
 
       <!-- Catalogue Subtab -->
       <div id="customerCatalogueView">
+        <!-- Multi-Test Selection Bar (Visible when 1 or more tests are selected) -->
+        <div id="multiTestBar" style="background:#ecfdf5; border:2px solid #10b981; border-radius:12px; padding:12px 18px; margin-bottom:18px; display:none; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 12px rgba(16,185,129,0.12);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="background:#10b981; color:#fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;" id="selectedTestsCount">0</div>
+            <div>
+              <strong style="color:#065f46; font-size:14px;">Selected Blood Tests (<span id="selectedTestsCountText">0</span>)</strong>
+              <div id="selectedTestsSummary" style="font-size:12px; color:#047857;">Click "+ Add Test" on test cards to select multiple tests</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:18px; font-weight:800; color:#065f46;" id="selectedTestsTotal">₹0.00</span>
+            <button type="button" class="btn btn-outline" style="border-color:#10b981; color:#065f46; background:#fff; padding:6px 12px; font-size:12px; font-weight:700;" onclick="App.clearSelectedTests()">Clear</button>
+            <button type="button" class="btn btn-primary" style="background:#10b981; border-color:#10b981; padding:8px 18px; font-size:13px; font-weight:800;" onclick="App.openMultiBookingModal()">📅 Book Selected Tests</button>
+          </div>
+        </div>
+
         <!-- Search and Categories -->
         <div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
           <input type="text" id="testSearchInput" class="form-control" placeholder="Search tests (e.g. CBC, Thyroid, Glucose, Lipid, Vitamin D)..." style="max-width:400px;" oninput="App.handleTestSearch(this.value)" />
@@ -655,75 +671,86 @@
   <!-- ==================== MODALS ==================== -->
 
   
-  <!-- AUTHENTICATION OVERLAY MODAL (Customer Name+Phone Verification & Staff Login) -->
+  <!-- AUTHENTICATION OVERLAY MODAL (Customer Login & Staff Login) -->
   <div id="authModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this) App.closeModals()">
-    <div class="modal-card" style="max-width:480px; position:relative;">
+    <div class="modal-card" style="max-width:460px; position:relative;">
       <div class="modal-header">
         <div>
           <h3 class="modal-title" id="authModalTitle">Sign in to MultiLab07</h3>
-          <p class="panel-subtitle" style="margin:2px 0 0; font-size:12px;">Choose your role to access your account</p>
+          <p class="panel-subtitle" style="margin:2px 0 0; font-size:12px;">Choose your account role</p>
         </div>
         <button class="modal-close" onclick="App.closeModals()" title="Close and return to website">✕</button>
       </div>
 
-      <!-- Role Tabs -->
+      <!-- Role Tabs: Customer, Collector Boy, Admin -->
       <div class="tabs-header" style="margin-bottom:16px;">
         <button class="tab-btn active" id="authTabCustomer" onclick="App.setLoginRole('customer')">Customer</button>
         <button class="tab-btn" id="authTabCollector" onclick="App.setLoginRole('collector')">Collector Boy</button>
         <button class="tab-btn" id="authTabAdmin" onclick="App.setLoginRole('admin')">Admin</button>
       </div>
 
-      <!-- 1. CUSTOMER LOGIN (USERNAME + PHONE NUMBER VERIFICATION) -->
+      <!-- 1. CUSTOMER LOGIN (BOX 1: USERNAME LOWERCASE, BOX 2: PHONE NUMBER) -->
       <div id="customerLoginFormView">
-        <form id="customerPhoneLoginForm" onsubmit="App.handleCustomerPhoneLogin(event)">
+        <form id="customerPhoneLoginForm" onsubmit="App.handleCustomerLogin(event)">
           <div class="form-group">
-            <label class="form-label">Full Name / Username</label>
-            <input type="text" id="custLoginName" class="form-control" required placeholder="Enter your name (e.g. Vithunraj / Ramesh)" />
+            <label class="form-label">Username (lowercase only)</label>
+            <input type="text" id="custLoginUsername" class="form-control" required placeholder="username (lowercase only)" style="text-transform:lowercase;" oninput="this.value = this.value.toLowerCase().trim()" />
+            <span style="font-size:11.5px; color:#64748b; margin-top:3px; display:block;">Enter your username in lowercase (e.g. vithunraj / ramesh)</span>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">10-Digit Mobile Number</label>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">Phone Number</label>
             <div class="input-group">
               <span style="background:#f1f5f9; padding:8px 12px; border:1px solid #cbd5e1; border-right:none; border-radius:6px 0 0 6px; font-weight:700; font-size:13px; color:#475569; display:flex; align-items:center;">+91</span>
-              <input type="tel" id="custLoginPhone" class="form-control" style="border-radius:0 6px 6px 0;" maxlength="10" required placeholder="e.g. 91765 67337" oninput="App.onCustPhoneChange()" />
+              <input type="tel" id="custLoginPhone" class="form-control" style="border-radius:0 6px 6px 0;" maxlength="10" required placeholder="10-digit mobile number (e.g. 91765 67337)" />
             </div>
           </div>
 
-          <!-- Phone Verification Section -->
-          <div id="custOtpSection" style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <label class="form-label" style="margin:0; font-size:12.5px;">Phone Verification Code (OTP)</label>
-              <button type="button" class="btn btn-outline" id="custSendOtpBtn" style="padding:4px 10px; font-size:11.5px;" onclick="App.sendCustomerLoginOtp()">
-                📲 Send OTP
-              </button>
-            </div>
-            <input type="text" id="custLoginOtp" class="form-control" maxlength="6" placeholder="Enter 6-digit OTP (Test OTP: 123456)" value="123456" />
-            <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">Instant Verification: Test code <b>123456</b> is pre-filled for immediate access.</span>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px; padding:11px; font-size:14px; font-weight:700;">
-            ✅ Verify Phone & Sign In
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:18px; padding:12px; font-size:14.5px; font-weight:800;">
+            Sign in as Customer
           </button>
         </form>
       </div>
 
-      <!-- 2. STAFF / ADMIN LOGIN (USERNAME + PASSWORD) -->
-      <div id="staffLoginFormView" style="display:none;">
-        <form id="staffLoginForm" onsubmit="App.handleStaffLogin(event)">
+      <!-- 2. COLLECTOR BOY LOGIN (BOX 1: USERNAME, BOX 2: PASSWORD) -->
+      <div id="collectorLoginFormView" style="display:none;">
+        <form id="collectorLoginForm" onsubmit="App.handleCollectorLogin(event)">
           <div class="form-group">
-            <label class="form-label" id="staffUserLabel">Admin Username</label>
-            <input type="text" id="staffUsername" class="form-control" required placeholder="Enter username (e.g. admin or collectorboy)" />
+            <label class="form-label">Collector Username</label>
+            <input type="text" id="collectorLoginUsername" class="form-control" required placeholder="Enter assigned username (e.g. collectorboy)" />
           </div>
 
-          <div class="form-group">
+          <div class="form-group" style="margin-top:12px;">
             <label class="form-label">Password</label>
             <div class="input-group">
-              <input type="password" id="staffPassword" class="form-control" required placeholder="Enter password" />
-              <button type="button" class="btn btn-outline" onclick="App.togglePassword('staffPassword')">👁</button>
+              <input type="password" id="collectorLoginPassword" class="form-control" required placeholder="Enter password" />
+              <button type="button" class="btn btn-outline" onclick="App.togglePassword('collectorLoginPassword')">👁</button>
             </div>
           </div>
 
-          <button type="submit" id="staffSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:14px; padding:11px; font-size:14px; font-weight:700;">
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px; padding:12px; font-size:14.5px; font-weight:800;">
+            Sign in as Collector Boy
+          </button>
+        </form>
+      </div>
+
+      <!-- 3. ADMIN LOGIN (BOX 1: USERNAME, BOX 2: PASSWORD) -->
+      <div id="adminLoginFormView" style="display:none;">
+        <form id="adminLoginForm" onsubmit="App.handleAdminLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Admin Username</label>
+            <input type="text" id="adminLoginUsername" class="form-control" required placeholder="Enter admin username (e.g. admin)" />
+          </div>
+
+          <div class="form-group" style="margin-top:12px;">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+              <input type="password" id="adminLoginPassword" class="form-control" required placeholder="Enter admin password (e.g. Admin@MultiLab2026)" />
+              <button type="button" class="btn btn-outline" onclick="App.togglePassword('adminLoginPassword')">👁</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px; padding:12px; font-size:14.5px; font-weight:800;">
             Sign in as Admin
           </button>
         </form>
@@ -791,10 +818,25 @@
         <input type="hidden" id="bookTestId" />
         <input type="hidden" id="bookCompanyId" />
 
-        <div style="background:#f8fafc; padding:12px; border-radius:var(--radius-sm); margin-bottom:16px;">
-          <strong id="bookTestName">Test Name</strong>
-          <div id="bookCompanyLabel" style="font-size:12px; color:var(--text-muted);">Provider: Apollo Diagnostics</div>
-          <div style="font-size:18px; font-weight:800; color:var(--primary); margin-top:6px;" id="bookPrice">₹0.00</div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px; border-radius:10px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:14px; color:#0f172a;" id="bookCompanyLabel">Provider: Apollo Diagnostics</strong>
+            <span style="font-size:12px; color:#16a34a; font-weight:700;">🏠 Free Home Collection</span>
+          </div>
+
+          <strong style="font-size:13px; color:#334155; display:block; margin-bottom:6px;">Selected Tests:</strong>
+          <!-- Itemized list of selected N tests -->
+          <div id="bookSelectedTestsList" style="max-height:160px; overflow-y:auto; margin-bottom:10px; display:flex; flex-direction:column; gap:6px;">
+            <div style="padding:6px 8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+              <span id="bookTestName">Test Name</span>
+              <strong style="color:var(--primary);" id="bookTestPriceSingle">₹0.00</strong>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid #cbd5e1;">
+            <span style="font-size:13px; font-weight:700; color:#475569;">Grand Total:</span>
+            <div style="font-size:19px; font-weight:800; color:var(--primary);" id="bookPrice">₹0.00</div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -1223,7 +1265,7 @@
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261020-v3"></script>
+  <script src="app.js?v=20261020-v4"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -639,7 +639,17 @@ def create_booking():
     appointment_date = str(data.get("appointment_date", "")).strip()
     appointment_slot = str(data.get("appointment_slot", "07:30 AM - 08:30 AM")).strip()
 
-    if not patient_name or not phone or not collection_address or not appointment_date or not company_id or not test_id:
+    raw_test_ids = data.get("test_ids")
+    if isinstance(raw_test_ids, list) and raw_test_ids:
+        test_ids = [int(x) for x in raw_test_ids if str(x).isdigit()]
+        if not test_id and test_ids:
+            test_id = test_ids[0]
+    elif test_id:
+        test_ids = [int(test_id)]
+    else:
+        test_ids = []
+
+    if not patient_name or not phone or not collection_address or not appointment_date or not company_id or not test_ids:
         return jsonify({"error": "Patient name, mobile, address, appointment date, company and test are required."}), 400
 
     claims = get_current_user_claims()
@@ -650,23 +660,46 @@ def create_booking():
         if not company:
             return jsonify({"error": "Selected company was not found."}), 404
 
-        test_data = conn.execute("""
-            SELECT t.id, t.name, t.category,
-                   COALESCE(ct.price, t.price) AS price,
-                   COALESCE(ct.discount_percent, 0.0) AS discount_pct,
-                   COALESCE(ct.sample_type, t.sample_type) AS sample_type
-            FROM tests t
-            LEFT JOIN company_tests ct ON ct.test_id = t.id AND ct.company_id = ?
-            WHERE t.id = ?
-        """, (company_id, test_id)).fetchone()
+        test_names = []
+        test_cats = []
+        test_samples = []
+        base_price = 0.0
+        discount_amt = 0.0
+        final_amt = 0.0
 
-        if not test_data:
+        for tid in test_ids:
+            t_row = conn.execute("""
+                SELECT t.id, t.name, t.category,
+                       COALESCE(ct.price, t.price) AS price,
+                       COALESCE(ct.discount_percent, 0.0) AS discount_pct,
+                       COALESCE(ct.sample_type, t.sample_type) AS sample_type
+                FROM tests t
+                LEFT JOIN company_tests ct ON ct.test_id = t.id AND ct.company_id = ?
+                WHERE t.id = ?
+            """, (company_id, tid)).fetchone()
+            if t_row:
+                test_names.append(t_row["name"])
+                if t_row["category"] not in test_cats:
+                    test_cats.append(t_row["category"])
+                if t_row["sample_type"] not in test_samples:
+                    test_samples.append(t_row["sample_type"])
+                bp = float(t_row["price"])
+                dp = float(t_row["discount_pct"])
+                da = round(bp * (dp / 100.0), 2)
+                base_price += bp
+                discount_amt += da
+                final_amt += round(bp - da, 2)
+
+        if not test_names:
             return jsonify({"error": "Selected test was not found."}), 404
 
-        base_price = float(test_data["price"])
-        discount_pct = float(test_data["discount_pct"])
-        discount_amt = round(base_price * (discount_pct / 100.0), 2)
-        final_amt = round(base_price - discount_amt, 2)
+        base_price = round(base_price, 2)
+        discount_amt = round(discount_amt, 2)
+        final_amt = round(final_amt, 2)
+        discount_pct = round((discount_amt / base_price * 100.0), 1) if base_price > 0 else 0.0
+        combined_name = " + ".join(test_names)
+        combined_cat = ", ".join(test_cats)
+        combined_sample = ", ".join(test_samples)
 
         # Generate unique Reference & Invoice ID
         date_stamp = datetime.now().strftime("%Y%m%d")
@@ -686,11 +719,11 @@ def create_booking():
                 payment_status, payment_method
             ) VALUES (?, ?, ?, ?, ?, 'Booked', ?, ?, ?, ?, ?, ?, ?, ?, 'Not Assigned', ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'upi')
         """, (
-            patient_name, phone, test_id, company_id, appointment_date, now_str,
+            patient_name, phone, test_ids[0], company_id, appointment_date, now_str,
             booking_ref, invoice_id, customer_id, patient_email, patient_whatsapp,
             collection_address, appointment_slot,
-            company["name"], test_data["name"], test_data["category"],
-            test_data["sample_type"], base_price, discount_pct,
+            company["name"], combined_name, combined_cat,
+            combined_sample, base_price, discount_pct,
             discount_amt, final_amt
         ))
         booking_id = cur.lastrowid
@@ -703,7 +736,8 @@ def create_booking():
         "booking_reference": booking_ref,
         "invoice_id": invoice_id,
         "company_name": company["name"],
-        "test_name": test_data["name"],
+        "test_name": combined_name,
+        "test_count": len(test_names),
         "base_price": base_price,
         "discount_percent": discount_pct,
         "discount_amount": discount_amt,
