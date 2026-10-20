@@ -86,8 +86,8 @@ def init_and_migrate_db():
 
         # Ensure initial 3 companies exist
         initial_companies = [
-            ("Apollo Diagnostics", "#1769AA", "", "+91 1800-102-0288", "care@apollodiagnostics.in", "Apollo Health & Lifestyle, Hyderabad", "apollo.bloodlab@upi", 1),
-            ("PathCare", "#008C95", "", "+91 1800-200-7284", "support@pathcarelabs.com", "PathCare Reference Labs, Mumbai", "pathcare.bloodlab@upi", 1),
+            ("Apollo Diagnostics", "#16A34A", "", "+91 91765 67337", "apollodiaggowri@gmail.com", "Apollo Diagnostics - Blood Tests - Home Collection & Full Body Checkups Chennai", "apollo.bloodlab@upi", 1),
+            ("PathCare", "#008C95", "", "+91 91507 23872", "pathcarediagnostics44@gmail.com", "PathCare Diagnostics - Advanced Pathology & Home Collection", "pathcare.bloodlab@upi", 1),
             ("Primgen", "#6C4AB6", "", "+91 1800-599-7746", "help@primgen.com", "Primgen Molecular Diagnostics, Bengaluru", "primgen.bloodlab@upi", 1),
         ]
         now_str = datetime.now().isoformat(timespec="seconds")
@@ -104,8 +104,8 @@ def init_and_migrate_db():
                 """, (name, color, logo, now_str, phone, email, addr, upi, is_tab))
             else:
                 cursor.execute("""
-                    UPDATE companies SET name=?, is_primary_tab=?, contact_phone=COALESCE(NULLIF(contact_phone, ''), ?),
-                    contact_email=COALESCE(NULLIF(contact_email, ''), ?), address=COALESCE(NULLIF(address, ''), ?),
+                    UPDATE companies SET name=?, is_primary_tab=?, contact_phone=?,
+                    contact_email=?, address=?,
                     upi_id=COALESCE(NULLIF(upi_id, ''), ?) WHERE id=?
                 """, (name, is_tab, phone, email, addr, upi, existing["id"]))
 

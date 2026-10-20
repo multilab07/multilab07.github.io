@@ -65,6 +65,13 @@
     </div>
 
     <div class="nav-actions">
+      <!-- Quick navigation links for normal website -->
+      <nav class="nav-menu" style="display:flex; align-items:center; gap:6px; margin-right:8px;">
+        <button class="btn btn-outline" style="padding:6px 10px; font-size:12.5px; font-weight:700;" onclick="App.navigateHome()">🏠 Home</button>
+        <button class="btn btn-outline" style="padding:6px 10px; font-size:12.5px; font-weight:700;" onclick="App.scrollToTests()">🧪 Tests</button>
+        <button class="btn btn-outline" style="padding:6px 10px; font-size:12.5px; font-weight:700;" onclick="App.scrollToContact()">📍 Contact Us</button>
+      </nav>
+
       <!-- Role indicator -->
       <div id="roleBadge" class="role-badge" style="display:none;">
         <span id="roleBadgeDot">●</span>
@@ -91,62 +98,66 @@
   <!-- MAIN APP CONTAINER -->
   <main class="container">
 
-    <!-- 1. AUTHENTICATION & ROLE SELECTION VIEW (When not logged in) -->
-    <div id="authSection" class="panel" style="max-width:520px; margin:40px auto; display:none;">
-      <div class="panel-header">
-        <div>
-          <h2 class="panel-title">Sign in to MultiLab07</h2>
-          <p class="panel-subtitle">Select your authorized account role</p>
-        </div>
-      </div>
-
-      <!-- Exactly three primary login options -->
-      <div class="tabs-header">
-        <button class="tab-btn active" onclick="App.setLoginRole('customer')">Customer</button>
-        <button class="tab-btn" onclick="App.setLoginRole('collector')">Collector Boy</button>
-        <button class="tab-btn" onclick="App.setLoginRole('admin')">Admin</button>
-      </div>
-
-      <form id="loginForm" onsubmit="App.handleLogin(event)">
-        <div class="form-group">
-          <label class="form-label" id="loginUserLabel">Username, Email, or 10-Digit Mobile</label>
-          <input type="text" id="loginUsername" class="form-control" required placeholder="Enter your registered username" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <div class="input-group">
-            <input type="password" id="loginPassword" class="form-control" required placeholder="Enter password" />
-            <button type="button" class="btn btn-outline" onclick="App.togglePassword('loginPassword')">👁</button>
-          </div>
-        </div>
-
-        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:8px;">Sign in as Customer</button>
-      </form>
-
-      <div id="customerSignupPrompt" style="margin-top:16px; text-align:center; font-size:13px; color:var(--text-muted);">
-        Don't have an account? <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showRegisterModal()">Register with Mobile OTP</a>
-      </div>
-      <div id="forgotPasswordPrompt" style="margin-top:10px; text-align:center; font-size:13px;">
-        <a href="#" style="color:var(--primary); font-weight:700;" onclick="App.showForgotPasswordModal()">Forgot Password?</a>
-      </div>
-    </div>
-
     <!-- 2. CUSTOMER VIEW -->
     <div id="customerSection" style="display:none;">
       <!-- Hero Banner for Selected Laboratory -->
-      <div class="hero-card" id="heroCard">
-        <div class="hero-info">
-          <span class="company-switch-badge" id="heroBadge">Accredited Laboratory</span>
-          <h2 id="heroTitle" style="margin-top:10px;">Apollo Diagnostics</h2>
-          <p id="heroSubtitle">Verified diagnostic tests, NABL/CAP-accredited specimen processing, and scheduled phlebotomist home collection.</p>
+      <div class="hero-card" id="heroCard" style="position:relative; overflow:hidden;">
+        <div class="hero-info" style="flex:1; min-width:280px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+            <span class="company-switch-badge" id="heroBadge" style="background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); font-weight:700;">NABL Accredited Laboratory</span>
+            <span id="heroVerifiedPill" style="background:#22c55e; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:12px;">✓ Verified Center</span>
+          </div>
+          <h2 id="heroTitle" style="margin:4px 0 8px; font-size:24px; font-weight:800; line-height:1.3;">Apollo Diagnostics</h2>
+          <p id="heroSubtitle" style="font-size:13.5px; opacity:0.95; line-height:1.5; margin-bottom:12px;">
+            Apollo Diagnostics - Blood Tests - Home Collection & Full Body Checkups Chennai
+          </p>
+
+          <!-- Direct Quick Contact Badges inside Hero Banner -->
+          <div id="heroContactChips" style="display:flex; flex-wrap:wrap; gap:8px; font-size:12px;">
+            <!-- Populated dynamically via App.loadTestsForCurrentCompany -->
+          </div>
         </div>
-        <div>
-          <!-- Accessible company selector for newly added companies without breaking bottom 3 tabs -->
-          <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:4px; opacity:0.9;">Choose Laboratory</label>
-          <select id="companySelectorDropdown" class="form-control" style="font-weight:700; min-width:220px;" onchange="App.handleDropdownCompanyChange(this.value)">
+
+        <div style="min-width:220px; background:rgba(0,0,0,0.18); padding:16px; border-radius:12px; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.15);">
+          <label style="display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; color:#fff;">Select Partner Laboratory</label>
+          <select id="companySelectorDropdown" class="form-control" style="font-weight:700; width:100%; background:#fff; color:#0f172a; border-radius:8px; padding:8px 10px;" onchange="App.handleDropdownCompanyChange(this.value)">
             <!-- Populated dynamically -->
           </select>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <a href="javascript:void(0)" onclick="App.scrollToContact()" style="color:#fff; font-size:11.5px; text-decoration:underline; font-weight:600;">📍 View Lab Address & Map</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust Pillars Bar -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-bottom:20px;">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">🏡</span>
+          <div>
+            <strong style="font-size:13px; color:#0f172a; display:block;">Doorstep Collection</strong>
+            <span style="font-size:11.5px; color:#64748b;">Certified phlebotomists arrive at your home</span>
+          </div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">⚡</span>
+          <div>
+            <strong style="font-size:13px; color:#0f172a; display:block;">Express Digital Reports</strong>
+            <span style="font-size:11.5px; color:#64748b;">WhatsApp & Email within 6–12 hrs</span>
+          </div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">🛡️</span>
+          <div>
+            <strong style="font-size:13px; color:#0f172a; display:block;">NABL / ISO Accredited</strong>
+            <span style="font-size:11.5px; color:#64748b;">100% automated precision analyzers</span>
+          </div>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">💳</span>
+          <div>
+            <strong style="font-size:13px; color:#0f172a; display:block;">Flexible Payment</strong>
+            <span style="font-size:11.5px; color:#64748b;">Cash or UPI upon sample collection</span>
+          </div>
         </div>
       </div>
 
@@ -415,7 +426,211 @@
       </div>
     </div>
 
+  
+      <!-- CONTACT US & DIAGNOSTIC CENTRES SECTION -->
+      <section id="contactSection" class="panel" style="margin-top:36px; padding:28px;">
+        <div style="text-align:center; max-width:700px; margin:0 auto 24px;">
+          <span class="company-switch-badge" style="background:rgba(2,132,199,0.1); color:var(--primary); font-size:12px;">Verified Partner Centres</span>
+          <h2 style="font-size:26px; font-weight:800; margin-top:8px; color:var(--text-main);">Contact Us & Laboratory Locations</h2>
+          <p style="font-size:14px; color:var(--text-muted); line-height:1.6;">
+            Contact our accredited partner laboratories directly for blood test inquiries, appointment scheduling, report downloads, and free doorstep phlebotomist sample collections in Chennai.
+          </p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
+          <!-- 1. APOLLO DIAGNOSTICS CHENNAI -->
+          <div class="card" style="border:2px solid #16a34a; background:#f0fdf4; border-radius:14px; padding:22px; position:relative; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 12px rgba(22,163,74,0.08);">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <span style="background:#16a34a; color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">Accredited Hub • Chennai</span>
+                <span style="font-size:24px;">🏥</span>
+              </div>
+              <h3 style="font-size:18px; font-weight:800; color:#14532d; margin-bottom:6px; line-height:1.4;">
+                Apollo Diagnostics - Blood Tests - Home Collection & Full Body Checkups Chennai
+              </h3>
+              <p style="font-size:13px; color:#166534; margin-bottom:16px;">
+                NABL/CAP-accredited specimen processing, biochemistry, hormonal assays, and express doorstep sample collection.
+              </p>
+
+              <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:#1e293b;">
+                <!-- Location / Maps -->
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:16px; margin-top:1px;">📍</span>
+                  <div>
+                    <strong>Location / Branch:</strong> Santhoshpuram, Chennai<br/>
+                    <a href="https://share.google/0cAngOv1ttXVozu1D" target="_blank" rel="noopener noreferrer" style="color:#15803d; font-weight:700; text-decoration:underline; display:inline-flex; align-items:center; gap:4px; margin-top:3px;">
+                      <span>Open in Google Maps</span> ↗
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Phone -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">📞</span>
+                  <div>
+                    <strong>Helpline & Home Collection:</strong><br/>
+                    <a href="tel:+919176567337" style="color:#15803d; font-weight:700; text-decoration:none; font-size:14px;">
+                      +91 91765 67337
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">✉️</span>
+                  <div>
+                    <strong>Official Email:</strong><br/>
+                    <a href="mailto:apollodiaggowri@gmail.com" style="color:#15803d; font-weight:600; text-decoration:none;">
+                      apollodiaggowri@gmail.com
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Instagram -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">📸</span>
+                  <div>
+                    <strong>Instagram Profile:</strong><br/>
+                    <a href="https://www.instagram.com/apollo_diagnostic_santhoshpura?dlrf=MW04M3F4MnNzenM4Yg==" target="_blank" rel="noopener noreferrer" style="color:#c026d3; font-weight:700; text-decoration:underline;">
+                      @apollo_diagnostic_santhoshpura ↗
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+              <a href="tel:+919176567337" class="btn" style="flex:1; background:#16a34a; color:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                📞 Call Lab
+              </a>
+              <a href="https://wa.me/919176567337?text=Hi%20Apollo%20Diagnostics,%20I%20would%20like%20to%20book%20a%20blood%20test%20in%20Chennai." target="_blank" rel="noopener noreferrer" class="btn" style="flex:1; background:#25D366; color:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                💬 WhatsApp
+              </a>
+              <a href="https://share.google/0cAngOv1ttXVozu1D" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="flex:1; border-color:#16a34a; color:#16a34a; background:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                🗺️ Directions
+              </a>
+            </div>
+          </div>
+
+          <!-- 2. PATHCARE DIAGNOSTICS -->
+          <div class="card" style="border:2px solid #008c95; background:#f0fdfa; border-radius:14px; padding:22px; position:relative; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 12px rgba(0,140,149,0.08);">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <span style="background:#008c95; color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">Advanced Pathology • Chennai</span>
+                <span style="font-size:24px;">🔬</span>
+              </div>
+              <h3 style="font-size:18px; font-weight:800; color:#134e4a; margin-bottom:6px; line-height:1.4;">
+                PathCare Diagnostics - Advanced Pathology & Diagnostic Centre
+              </h3>
+              <p style="font-size:13px; color:#0f766e; margin-bottom:16px;">
+                Clinical pathology, automated hematology, biochemistry, and scheduled phlebotomist home collection.
+              </p>
+
+              <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:#1e293b;">
+                <!-- Phone -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">📞</span>
+                  <div>
+                    <strong>Phone & Appointments:</strong><br/>
+                    <a href="tel:+919150723872" style="color:#0f766e; font-weight:700; text-decoration:none; font-size:14px;">
+                      +91 91507 23872
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">✉️</span>
+                  <div>
+                    <strong>Official Email:</strong><br/>
+                    <a href="mailto:pathcarediagnostics44@gmail.com" style="color:#0f766e; font-weight:600; text-decoration:none;">
+                      pathcarediagnostics44@gmail.com
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Instagram -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">📸</span>
+                  <div>
+                    <strong>Instagram Profile:</strong><br/>
+                    <a href="https://www.instagram.com/path_care_diagnostics26?psln=cWV5cDV5MjZwZTd2" target="_blank" rel="noopener noreferrer" style="color:#c026d3; font-weight:700; text-decoration:underline;">
+                      @path_care_diagnostics26 ↗
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Timings -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">⏰</span>
+                  <div>
+                    <strong>Laboratory Timings:</strong><br/>
+                    <span style="color:#475569;">Mon – Sat: 7:00 AM – 8:30 PM • Sunday: 7:00 AM – 1:00 PM</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+              <a href="tel:+919150723872" class="btn" style="flex:1; background:#008c95; color:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                📞 Call Lab
+              </a>
+              <a href="https://wa.me/919150723872?text=Hi%20PathCare%20Diagnostics,%20I%20would%20like%20to%20inquire%20about%20blood%20tests." target="_blank" rel="noopener noreferrer" class="btn" style="flex:1; background:#25D366; color:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                💬 WhatsApp
+              </a>
+              <a href="mailto:pathcarediagnostics44@gmail.com" class="btn btn-outline" style="flex:1; border-color:#008c95; color:#008c95; background:#fff; text-align:center; text-decoration:none; font-size:13px; font-weight:700; padding:9px 12px; border-radius:8px;">
+                ✉️ Email
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
   </main>
+
+  
+  <!-- COMPREHENSIVE MEDICAL PORTAL FOOTER -->
+  <footer style="margin-top:40px; padding:36px 20px 80px; background:#0f172a; color:#94a3b8; border-top:1px solid #1e293b; border-radius:16px 16px 0 0;">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:30px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <span style="font-size:24px;">🔬</span>
+          <strong style="font-size:20px; color:#f8fafc;">MultiLab<span style="color:#0ea5e9;">07</span></strong>
+        </div>
+        <p style="font-size:13px; line-height:1.6; color:#94a3b8;">
+          MultiLab07 Diagnostic Hub connects patients directly with NABL/ISO-accredited pathology laboratories in Chennai, providing certified doorstep blood collection and express digital reports.
+        </p>
+        <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap;">
+          <a href="https://www.instagram.com/apollo_diagnostic_santhoshpura?dlrf=MW04M3F4MnNzenM4Yg==" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📸 Apollo Instagram</a>
+          <a href="https://www.instagram.com/path_care_diagnostics26?psln=cWV5cDV5MjZwZTd2" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📸 PathCare Instagram</a>
+        </div>
+      </div>
+
+      <div>
+        <strong style="color:#f8fafc; font-size:15px; display:block; margin-bottom:12px;">Partner Diagnostic Centres</strong>
+        <ul style="list-style:none; padding:0; margin:0; font-size:13px; line-height:2.2;">
+          <li><a href="javascript:void(0)" onclick="App.switchCompanyTab(1)" style="color:#94a3b8; text-decoration:none;">🏥 Apollo Diagnostics Chennai (+91 91765 67337)</a></li>
+          <li><a href="javascript:void(0)" onclick="App.switchCompanyTab(2)" style="color:#94a3b8; text-decoration:none;">🔬 PathCare Diagnostics (+91 91507 23872)</a></li>
+          <li><a href="https://share.google/0cAngOv1ttXVozu1D" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:underline;">📍 Apollo Santhoshpuram Google Maps</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <strong style="color:#f8fafc; font-size:15px; display:block; margin-bottom:12px;">Direct Support & Helplines</strong>
+        <div style="font-size:13px; line-height:1.9;">
+          <div>📞 <b>Apollo Chennai:</b> <a href="tel:+919176567337" style="color:#38bdf8; text-decoration:none;">+91 91765 67337</a></div>
+          <div>📞 <b>PathCare Diagnostics:</b> <a href="tel:+919150723872" style="color:#38bdf8; text-decoration:none;">+91 91507 23872</a></div>
+          <div>✉️ <b>Apollo Email:</b> <a href="mailto:apollodiaggowri@gmail.com" style="color:#38bdf8; text-decoration:none;">apollodiaggowri@gmail.com</a></div>
+          <div>✉️ <b>PathCare Email:</b> <a href="mailto:pathcarediagnostics44@gmail.com" style="color:#38bdf8; text-decoration:none;">pathcarediagnostics44@gmail.com</a></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:1200px; margin:28px auto 0; padding-top:20px; border-top:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:12px; color:#64748b;">
+      <div>© 2026 MultiLab07 Diagnostic Hub. All medical laboratory tests conducted under registered pathologist supervision.</div>
+      <div>Website: <a href="https://multilab07.github.io/" style="color:#38bdf8; text-decoration:none;">https://multilab07.github.io/</a></div>
+    </div>
+  </footer>
 
   <!-- SOCIAL-MEDIA STYLE BOTTOM NAVIGATION BAR (Customer view) -->
   <nav class="bottom-nav" id="customerBottomNav" style="display:none;">
@@ -438,6 +653,84 @@
   </nav>
 
   <!-- ==================== MODALS ==================== -->
+
+  
+  <!-- AUTHENTICATION OVERLAY MODAL (Customer Name+Phone Verification & Staff Login) -->
+  <div id="authModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this) App.closeModals()">
+    <div class="modal-card" style="max-width:480px; position:relative;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="authModalTitle">Sign in to MultiLab07</h3>
+          <p class="panel-subtitle" style="margin:2px 0 0; font-size:12px;">Choose your role to access your account</p>
+        </div>
+        <button class="modal-close" onclick="App.closeModals()" title="Close and return to website">✕</button>
+      </div>
+
+      <!-- Role Tabs -->
+      <div class="tabs-header" style="margin-bottom:16px;">
+        <button class="tab-btn active" id="authTabCustomer" onclick="App.setLoginRole('customer')">Customer</button>
+        <button class="tab-btn" id="authTabCollector" onclick="App.setLoginRole('collector')">Collector Boy</button>
+        <button class="tab-btn" id="authTabAdmin" onclick="App.setLoginRole('admin')">Admin</button>
+      </div>
+
+      <!-- 1. CUSTOMER LOGIN (USERNAME + PHONE NUMBER VERIFICATION) -->
+      <div id="customerLoginFormView">
+        <form id="customerPhoneLoginForm" onsubmit="App.handleCustomerPhoneLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Full Name / Username</label>
+            <input type="text" id="custLoginName" class="form-control" required placeholder="Enter your name (e.g. Vithunraj / Ramesh)" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">10-Digit Mobile Number</label>
+            <div class="input-group">
+              <span style="background:#f1f5f9; padding:8px 12px; border:1px solid #cbd5e1; border-right:none; border-radius:6px 0 0 6px; font-weight:700; font-size:13px; color:#475569; display:flex; align-items:center;">+91</span>
+              <input type="tel" id="custLoginPhone" class="form-control" style="border-radius:0 6px 6px 0;" maxlength="10" required placeholder="e.g. 91765 67337" oninput="App.onCustPhoneChange()" />
+            </div>
+          </div>
+
+          <!-- Phone Verification Section -->
+          <div id="custOtpSection" style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label class="form-label" style="margin:0; font-size:12.5px;">Phone Verification Code (OTP)</label>
+              <button type="button" class="btn btn-outline" id="custSendOtpBtn" style="padding:4px 10px; font-size:11.5px;" onclick="App.sendCustomerLoginOtp()">
+                📲 Send OTP
+              </button>
+            </div>
+            <input type="text" id="custLoginOtp" class="form-control" maxlength="6" placeholder="Enter 6-digit OTP (Test OTP: 123456)" value="123456" />
+            <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">Instant Verification: Test code <b>123456</b> is pre-filled for immediate access.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px; padding:11px; font-size:14px; font-weight:700;">
+            ✅ Verify Phone & Sign In
+          </button>
+        </form>
+      </div>
+
+      <!-- 2. STAFF / ADMIN LOGIN (USERNAME + PASSWORD) -->
+      <div id="staffLoginFormView" style="display:none;">
+        <form id="staffLoginForm" onsubmit="App.handleStaffLogin(event)">
+          <div class="form-group">
+            <label class="form-label" id="staffUserLabel">Admin Username</label>
+            <input type="text" id="staffUsername" class="form-control" required placeholder="Enter username (e.g. admin or collectorboy)" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+              <input type="password" id="staffPassword" class="form-control" required placeholder="Enter password" />
+              <button type="button" class="btn btn-outline" onclick="App.togglePassword('staffPassword')">👁</button>
+            </div>
+          </div>
+
+          <button type="submit" id="staffSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:14px; padding:11px; font-size:14px; font-weight:700;">
+            Sign in as Admin
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
 
   <!-- CUSTOMER REGISTRATION MODAL WITH REAL OTP -->
   <div id="registerModal" class="modal-backdrop" style="display:none;">
@@ -930,7 +1223,7 @@
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261020-adminpass"></script>
+  <script src="app.js?v=20261020-v3"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
