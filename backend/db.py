@@ -190,7 +190,9 @@ def init_and_migrate_db():
             "payment_receipt_data": "TEXT NOT NULL DEFAULT ''",
             "payment_verified_at": "TEXT",
             "payment_verified_by": "INTEGER",
-            "payment_notes": "TEXT NOT NULL DEFAULT ''"
+            "payment_notes": "TEXT NOT NULL DEFAULT ''",
+            "whatsapp_delivery_date": "TEXT NOT NULL DEFAULT ''",
+            "whatsapp_note": "TEXT NOT NULL DEFAULT ''"
         }
         for col, definition in booking_migrations.items():
             safe_add_column(cursor, "bookings", col, definition)

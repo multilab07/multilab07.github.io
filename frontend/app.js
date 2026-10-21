@@ -494,6 +494,23 @@ const App = (function () {
     } catch (e) {}
   }
 
+  function getDefaultWhatsappDate(baseDateStr) {
+    try {
+      const d = baseDateStr ? new Date(baseDateStr) : new Date();
+      if (isNaN(d.getTime())) {
+        const fallback = new Date();
+        fallback.setDate(fallback.getDate() + 5);
+        return fallback.toISOString().split("T")[0];
+      }
+      d.setDate(d.getDate() + 5);
+      return d.toISOString().split("T")[0];
+    } catch (e) {
+      const fallback = new Date();
+      fallback.setDate(fallback.getDate() + 5);
+      return fallback.toISOString().split("T")[0];
+    }
+  }
+
   function normalizeBooking(b) {
     if (!b || typeof b !== "object") return b;
     const rawAmt = b.payable_amount !== undefined ? b.payable_amount : (b.final_amount_snapshot !== undefined ? b.final_amount_snapshot : (b.total_amount !== undefined ? b.total_amount : (b.amount !== undefined ? b.amount : 499)));
@@ -507,11 +524,15 @@ const App = (function () {
     const slotStr = b.time_slot || b.appointment_slot || "08:00 AM - 10:00 AM";
     const addrStr = b.address || b.collection_address || "Pallikaranai to Tambaram Service Zone, Chennai";
     const pStatus = (b.payment_status || "unpaid").toLowerCase();
-    const cStatus = b.status || b.collection_status || "CONFIRMED";
+    const cStatus = b.collection_status || b.status || "CONFIRMED";
+    const defWDate = getDefaultWhatsappDate(dateStr);
+    const wDate = b.whatsapp_delivery_date || defWDate;
+    const wNote = b.whatsapp_note || "";
 
     return {
       ...b,
       id: b.id || Date.now(),
+      booking_id: b.id || Date.now(),
       booking_code: code,
       booking_reference: b.booking_reference || code,
       invoice_id: b.invoice_id || ("INV-" + code),
@@ -534,6 +555,8 @@ const App = (function () {
       payment_status: pStatus,
       payment_method: b.payment_method || (pStatus === "pending_collection" ? "cash" : "upi"),
       payment_method_detail: b.payment_method_detail || (pStatus === "pending_collection" ? "cash_on_arrival" : "upi_online"),
+      whatsapp_delivery_date: wDate,
+      whatsapp_note: wNote,
       total_amount: amt,
       payable_amount: amt,
       final_amount_snapshot: amt,
@@ -1046,6 +1069,61 @@ const App = (function () {
 
     if (endpoint.startsWith("/api/collector/assignments")) {
       return getStoredBookings();
+    }
+
+    // Collector status update (On the Way, Arrived, Blood Collected, Gave to Lab)
+    if (endpoint.startsWith("/api/collector/bookings/") && endpoint.includes("/status") && method === "PATCH") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b) throw new Error("Booking not found.");
+
+      const newStatus = body.status || "Sample Collected";
+      b.collection_status = newStatus;
+      b.status = newStatus;
+
+      if (newStatus === "Gave to Lab" || newStatus === "Delivered to Lab") {
+        b.collection_status = "Gave to Lab";
+        b.status = "Gave to Lab";
+      }
+
+      saveStoredBookings(bookings);
+      return { success: true, message: `Status updated to: ${b.collection_status}`, booking: b };
+    }
+
+    // Collector cash collection at doorstep
+    if (endpoint.startsWith("/api/collector/bookings/") && endpoint.includes("/collect-cash") && method === "POST") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b) throw new Error("Booking not found.");
+
+      b.payment_status = "paid";
+      b.collection_status = "Cash Collected";
+      b.status = "Cash Collected";
+      b.payment_method = "cash";
+      b.payment_method_detail = "cash_on_arrival";
+      saveStoredBookings(bookings);
+      return { success: true, message: `Cash ₹${b.payable_amount} collected successfully! Marked as PAID.`, booking: b };
+    }
+
+    // Admin update WhatsApp delivery date & custom note
+    if (endpoint.includes("/whatsapp-date") && (method === "PATCH" || method === "POST")) {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b) throw new Error("Booking not found.");
+
+      b.whatsapp_delivery_date = body.whatsapp_delivery_date || body.delivery_date;
+      b.whatsapp_note = body.whatsapp_note || "Result will come in WhatsApp soon!";
+      saveStoredBookings(bookings);
+      return { success: true, message: `WhatsApp result date updated to ${b.whatsapp_delivery_date}!`, booking: b };
     }
 
     if (endpoint.includes("/trips/") && endpoint.includes("/status")) {
@@ -2092,6 +2170,9 @@ const App = (function () {
         const payStatus = (b.payment_status || "unpaid").toLowerCase();
         const collStatus = b.collection_status || b.status || "CONFIRMED";
 
+        const wDate = b.whatsapp_delivery_date || getDefaultWhatsappDate(apptDate);
+        const hasCustomNote = Boolean(b.whatsapp_note);
+
         tr.innerHTML = `
           <td><b>${bRef}</b></td>
           <td>${compName}</td>
@@ -2100,6 +2181,15 @@ const App = (function () {
           <td><b>₹${numAmt.toFixed(2)}</b></td>
           <td><span class="badge badge-${payStatus}">${payStatus.toUpperCase()}</span></td>
           <td><span class="badge badge-active">${collStatus}</span></td>
+          <td>
+            <div style="font-size:12px; font-weight:700; color:#15803d; line-height:1.3;">📲 ${wDate}</div>
+            <small style="color:${hasCustomNote ? '#0284c7' : '#64748b'}; font-size:11px; display:block; margin:2px 0 4px;">
+              ${hasCustomNote ? `⚡ ${b.whatsapp_note}` : 'Expected in 5 days'}
+            </small>
+            <a href="https://wa.me/919176567337?text=Hi%20MultiLab07%2C%20checking%20my%20test%20results%20for%20Booking%20${bRef}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; color:#15803d; font-size:11px; font-weight:700; text-decoration:none;">
+              💬 WhatsApp Chat
+            </a>
+          </td>
           <td>
             ${isPaid
               ? `<a href="/api/bookings/${b.id}/receipt.pdf" target="_blank" class="btn btn-outline" style="padding:6px 10px; font-size:12px;">📄 Download PDF</a>`
@@ -2158,13 +2248,25 @@ const App = (function () {
           `<option value="${s.id}" ${s.display_name === b.collector_name ? "selected" : ""}>${s.display_name}</option>`
         ).join("");
 
+        const wDate = b.whatsapp_delivery_date || getDefaultWhatsappDate(b.appointment_date || b.scheduled_date);
+        const hasCustomNote = Boolean(b.whatsapp_note);
+
         tr.innerHTML = `
           <td><b>${b.booking_reference}</b><br/><small style="color:#64748b;">${b.invoice_id}</small></td>
           <td><b>${b.patient_name}</b><br/><small>${b.phone}</small></td>
           <td>${b.company_name_snapshot}<br/><small style="color:#64748b;">${b.test_name_snapshot}</small></td>
           <td>${b.collection_address}<br/><small>${b.appointment_date} (${b.appointment_slot})</small></td>
-          <td><span class="badge badge-${b.payment_status}">${b.payment_status.toUpperCase()}</span></td>
+          <td><span class="badge badge-${(b.payment_status||'unpaid').toLowerCase()}">${(b.payment_status||'UNPAID').toUpperCase()}</span></td>
           <td><span class="badge badge-active">${b.collection_status}</span></td>
+          <td>
+            <div style="font-size:12px; font-weight:700; color:#15803d; line-height:1.2;">📲 ${wDate}</div>
+            <small style="color:${hasCustomNote ? '#0284c7' : '#64748b'}; font-size:11px; display:block; margin:2px 0 4px;">
+              ${hasCustomNote ? `⚡ ${b.whatsapp_note}` : '(Default: 5 Days)'}
+            </small>
+            <button class="btn btn-outline" style="padding:3px 8px; font-size:11px; border-color:#86efac; color:#15803d; font-weight:600; line-height:1.2;" onclick="App.openEditWhatsAppModal(${b.id})">
+              ✏️ Edit WhatsApp Date
+            </button>
+          </td>
           <td>
             <div style="display:flex; gap:6px;">
               <select id="collectorSelect_${b.id}" class="form-control" style="font-size:12px; padding:6px;">
@@ -2707,51 +2809,225 @@ const App = (function () {
     try {
       const tasks = await api("/api/collector/assignments");
       const container = document.getElementById("collectorTasksContainer");
+      if (!container) return;
       container.innerHTML = "";
 
-      if (tasks.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">No active home collection appointments assigned to you.</div>';
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted); font-size:15px;">No active home collection appointments assigned to you.</div>';
         return;
       }
 
       tasks.forEach(t => {
+        const bId = t.id || t.booking_id;
+        const bRef = t.booking_reference || t.booking_code || `MLB-${bId}`;
+        const patientName = t.patient_name || "Patient";
+        const patientPhone = t.phone || t.patient_phone || "+91 91765 67337";
+        const address = t.collection_address || t.address || "Pallikaranai to Tambaram Service Zone";
+        const testName = t.test_name_snapshot || t.test_name || "Diagnostic Test Panel";
+        const sampleType = t.sample_type_snapshot || t.sample_type || "EDTA Whole Blood";
+        const apptDate = t.appointment_date || t.scheduled_date || "Today";
+        const apptSlot = t.appointment_slot || t.time_slot || "Morning";
+
+        const rawAmt = t.payable_amount ?? t.final_amount_snapshot ?? t.total_amount ?? 499;
+        const amountNum = Number(rawAmt) || 499;
+        const pStatus = (t.payment_status || "unpaid").toLowerCase();
+        const isPaid = pStatus === "paid";
+        const isCashMethod = (t.payment_method_detail === "cash_on_arrival" || t.payment_method === "cash");
+
+        const statusRaw = (t.collection_status || t.status || "Assigned").trim();
+        const statusUpper = statusRaw.toUpperCase();
+
+        const isTripOnTheWay = statusUpper === "ON THE WAY" || statusUpper === "ON_THE_WAY";
+        const isArrived = statusUpper === "ARRIVED";
+        const isSampleCollected = statusUpper === "SAMPLE COLLECTED" || statusUpper === "SAMPLE_COLLECTED" || statusUpper === "BLOOD COLLECTED" || statusUpper === "BLOOD_COLLECTED";
+        const isCashCollected = statusUpper === "CASH COLLECTED" || statusUpper === "CASH_COLLECTED";
+        const isDelivered = statusUpper === "GAVE TO LAB" || statusUpper === "GAVE_TO_LAB" || statusUpper === "DELIVERED TO LAB" || statusUpper === "DELIVERED_TO_LAB";
+
+        // Determine action buttons according to user workflow
+        let actionButtonsHtml = "";
+
+        if (isDelivered) {
+          actionButtonsHtml = `
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge" style="background:#dcfce7; color:#15803d; font-size:13px; font-weight:700; padding:8px 14px; border-radius:8px;">
+                🏢 Gave to Lab (Complete)
+              </span>
+            </div>
+          `;
+        } else if (isSampleCollected || isCashCollected) {
+          if (isCashMethod && !isPaid && !isCashCollected) {
+            // Cash on Arrival: Blood is collected, now collect cash
+            actionButtonsHtml = `
+              <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                <button class="btn btn-success" style="background:#16a34a; border-color:#16a34a; font-weight:700; padding:9px 14px; font-size:13px;" onclick="App.collectorCollectCash(${bId})">
+                  💵 Cash Collect (₹${amountNum.toFixed(2)})
+                </button>
+                <small style="color:#d97706; font-weight:700;">⚠️ Doorstep Cash on Arrival pending</small>
+              </div>
+            `;
+          } else {
+            // UPI is there or cash already collected: Directly show Gave to Lab
+            actionButtonsHtml = `
+              <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                <button class="btn btn-primary" style="background:#0284c7; border-color:#0284c7; font-weight:700; padding:9px 16px; font-size:13px;" onclick="App.updateCollectorStatus(${bId}, 'Gave to Lab')">
+                  🏢 Gave to Lab
+                </button>
+                <small style="color:#16a34a; font-weight:600;">
+                  ${isPaid ? '✅ Payment Verified (Paid)' : (isCashMethod ? '✅ Cash Collected' : '✅ UPI Online — Hand to Lab')}
+                </small>
+              </div>
+            `;
+          }
+        } else if (isArrived) {
+          actionButtonsHtml = `
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-primary" style="background:#7c3aed; border-color:#7c3aed; font-weight:700; padding:9px 14px; font-size:13px;" onclick="App.updateCollectorStatus(${bId}, 'Blood Collected')">
+                🧪 Blood Collected
+              </button>
+              <button class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5; font-size:12px; padding:6px 10px;" onclick="App.updateCollectorStatus(${bId}, 'Cancelled')">Cancel</button>
+            </div>
+          `;
+        } else if (isTripOnTheWay) {
+          actionButtonsHtml = `
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-primary" style="background:#ea580c; border-color:#ea580c; font-weight:700; padding:9px 14px; font-size:13px;" onclick="App.updateCollectorStatus(${bId}, 'Arrived')">
+                📍 Arrived at Location
+              </button>
+              <button class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5; font-size:12px; padding:6px 10px;" onclick="App.updateCollectorStatus(${bId}, 'Cancelled')">Cancel</button>
+            </div>
+          `;
+        } else {
+          // Assigned / Confirmed
+          actionButtonsHtml = `
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-primary" style="background:#0284c7; border-color:#0284c7; font-weight:700; padding:9px 14px; font-size:13px;" onclick="App.updateCollectorStatus(${bId}, 'On the Way')">
+                🏍️ On the Way
+              </button>
+              <button class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5; font-size:12px; padding:6px 10px;" onclick="App.updateCollectorStatus(${bId}, 'Cancelled')">Cancel</button>
+            </div>
+          `;
+        }
+
+        // Stepper visual
+        const step1Active = isTripOnTheWay || isArrived || isSampleCollected || isCashCollected || isDelivered;
+        const step2Active = isArrived || isSampleCollected || isCashCollected || isDelivered;
+        const step3Active = isSampleCollected || isCashCollected || isDelivered;
+        const step4Active = (isCashMethod ? (isPaid || isCashCollected || isDelivered) : true);
+        const step5Active = isDelivered;
+
         const card = document.createElement("div");
         card.className = "panel";
-        card.style.marginBottom = "14px";
-
-        const nextActionMap = {
-          "Assigned": "Accepted",
-          "Accepted": "On the Way",
-          "On the Way": "Arrived",
-          "Arrived": "Sample Collected"
-        };
-        const nextStatus = nextActionMap[t.collection_status];
+        card.style.marginBottom = "16px";
+        card.style.border = isDelivered ? "1.5px solid #86efac" : "1.5px solid #e2e8f0";
 
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:10px;">
+          <!-- Progressive Stepper header -->
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px; font-size:11.5px;">
+            <span style="padding:3px 8px; border-radius:12px; background:${step1Active ? '#0284c7' : '#e2e8f0'}; color:${step1Active ? '#fff' : '#64748b'}; font-weight:700;">1. On the Way</span>
+            <span style="color:#cbd5e1;">➔</span>
+            <span style="padding:3px 8px; border-radius:12px; background:${step2Active ? '#ea580c' : '#e2e8f0'}; color:${step2Active ? '#fff' : '#64748b'}; font-weight:700;">2. Arrived</span>
+            <span style="color:#cbd5e1;">➔</span>
+            <span style="padding:3px 8px; border-radius:12px; background:${step3Active ? '#7c3aed' : '#e2e8f0'}; color:${step3Active ? '#fff' : '#64748b'}; font-weight:700;">3. Blood Collected</span>
+            <span style="color:#cbd5e1;">➔</span>
+            ${isCashMethod ? `
+              <span style="padding:3px 8px; border-radius:12px; background:${step4Active ? '#16a34a' : '#fef08a'}; color:${step4Active ? '#fff' : '#854d0e'}; font-weight:700;">4. Cash Collect</span>
+              <span style="color:#cbd5e1;">➔</span>
+            ` : ''}
+            <span style="padding:3px 8px; border-radius:12px; background:${step5Active ? '#16a34a' : '#e2e8f0'}; color:${step5Active ? '#fff' : '#64748b'}; font-weight:700;">${isCashMethod ? '5' : '4'}. Gave to Lab</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px;">
             <div>
-              <span class="badge badge-active">${t.collection_status}</span>
-              <h3 style="margin:8px 0 4px; font-size:17px;">#${t.booking_reference} — ${t.patient_name}</h3>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge-active" style="text-transform:uppercase;">${statusRaw}</span>
+                <span class="badge badge-${isPaid ? 'paid' : (isCashMethod ? 'warning' : 'pending')}">
+                  ${isPaid ? 'PAID' : (isCashMethod ? '💵 CASH ON ARRIVAL' : '📱 UPI ONLINE')}
+                </span>
+              </div>
+              <h3 style="margin:8px 0 4px; font-size:17px; color:#0f172a;">#${bRef} — ${patientName}</h3>
               <div style="font-size:13px; color:#475569; margin-bottom:6px;">
-                📞 <a href="tel:${t.phone}" style="color:var(--primary); font-weight:700;">${t.phone}</a> &nbsp;|&nbsp; 📍 ${t.collection_address}
+                📞 <a href="tel:${patientPhone}" style="color:var(--primary); font-weight:700;">${patientPhone}</a> &nbsp;|&nbsp; 📍 ${address}
               </div>
               <div style="font-size:13px; color:#64748b;">
-                🧪 <b>Test:</b> ${t.test_name_snapshot} (${t.sample_type_snapshot}) &nbsp;|&nbsp; ⏰ ${t.appointment_date} (${t.appointment_slot})
+                🧪 <b>Test:</b> ${testName} (${sampleType}) &nbsp;|&nbsp; ⏰ ${apptDate} (${apptSlot})
               </div>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              ${nextStatus
-                ? `<button class="btn btn-primary" onclick="App.updateCollectorStatus(${t.booking_id}, '${nextStatus}')">Mark ${nextStatus}</button>`
-                : `<span class="badge badge-paid">Collection Complete</span>`
-              }
-              <button class="btn btn-danger" onclick="App.updateCollectorStatus(${t.booking_id}, 'Cancelled')">Cancel</button>
+
+            <div>
+              ${actionButtonsHtml}
             </div>
           </div>
         `;
         container.appendChild(card);
       });
     } catch (err) {
-      console.error(err);
+      console.error("loadCollectorAssignments error:", err);
+    }
+  }
+
+  async function collectorCollectCash(bookingId) {
+    if (!confirm("Confirm that you have collected the cash payment at the patient doorstep?")) return;
+    try {
+      const res = await api(`/api/collector/bookings/${bookingId}/collect-cash`, {
+        method: "POST"
+      });
+      showToast(res.message || "Cash collected successfully and marked as Paid!");
+      loadCollectorAssignments();
+    } catch (err) {
+      showToast(err.message || "Failed to confirm cash collection.");
+    }
+  }
+
+  function openEditWhatsAppModal(bookingId) {
+    const bookings = getStoredBookings();
+    const b = bookings.find(x => x.id === bookingId);
+    if (!b) { showToast("Booking not found."); return; }
+
+    document.getElementById("editWhatsappBookingId").value = b.id;
+    document.getElementById("editWhatsappTargetInfo").textContent = `Booking Ref: #${b.booking_reference || b.booking_code} (${b.company_name_snapshot || b.company_name})`;
+    document.getElementById("editWhatsappPatientPhone").textContent = `Patient: ${b.patient_name} | 📲 WhatsApp: ${b.patient_phone || b.phone || 'N/A'}`;
+
+    const curDate = b.whatsapp_delivery_date || getDefaultWhatsappDate(b.appointment_date || b.scheduled_date);
+    document.getElementById("inputWhatsappDate").value = curDate;
+    document.getElementById("inputWhatsappNote").value = b.whatsapp_note || "Result will come in WhatsApp soon!";
+
+    document.getElementById("editWhatsappModal").style.display = "flex";
+  }
+
+  function quickSetWhatsappDate(preset) {
+    const d = new Date();
+    const noteEl = document.getElementById("inputWhatsappNote");
+    if (preset === "today") {
+      document.getElementById("inputWhatsappDate").value = d.toISOString().split("T")[0];
+      if (noteEl) noteEl.value = "Result ready today evening on WhatsApp!";
+    } else if (preset === "tomorrow") {
+      d.setDate(d.getDate() + 1);
+      document.getElementById("inputWhatsappDate").value = d.toISOString().split("T")[0];
+      if (noteEl) noteEl.value = "Result will come in WhatsApp soon!";
+    } else if (preset === "5days") {
+      d.setDate(d.getDate() + 5);
+      document.getElementById("inputWhatsappDate").value = d.toISOString().split("T")[0];
+      if (noteEl) noteEl.value = "Official test result will be delivered in 5 days.";
+    }
+  }
+
+  async function saveWhatsappDate() {
+    const bookingId = parseInt(document.getElementById("editWhatsappBookingId").value);
+    const newDate = document.getElementById("inputWhatsappDate").value;
+    const newNote = (document.getElementById("inputWhatsappNote").value || "").trim() || "Result will come in WhatsApp soon!";
+
+    if (!newDate) { showToast("Please select a valid date."); return; }
+
+    try {
+      const res = await api(`/api/admin/bookings/${bookingId}/whatsapp-date`, {
+        method: "PATCH",
+        body: JSON.stringify({ whatsapp_delivery_date: newDate, whatsapp_note: newNote })
+      });
+      closeModals();
+      showToast(res.message || `WhatsApp result date updated to ${newDate}!`);
+      loadAdminAssignments();
+    } catch (err) {
+      showToast(err.message || "Failed to update WhatsApp delivery date.");
     }
   }
 
@@ -2930,6 +3206,10 @@ const App = (function () {
     resetStaffPassword,
     loadCollectorAssignments,
     updateCollectorStatus,
+    collectorCollectCash,
+    openEditWhatsAppModal,
+    quickSetWhatsappDate,
+    saveWhatsappDate,
     openHelpModal,
     closeModals,
     togglePassword,

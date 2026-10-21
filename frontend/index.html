@@ -223,6 +223,7 @@
                 <th>Amount</th>
                 <th>Payment Status</th>
                 <th>Collection Status</th>
+                <th>WhatsApp Result</th>
                 <th>Official Receipt</th>
               </tr>
             </thead>
@@ -285,6 +286,7 @@
                 <th>Address & Slot</th>
                 <th>Payment</th>
                 <th>Collection Status</th>
+                <th>WhatsApp Result Date</th>
                 <th>Assign Collector</th>
               </tr>
             </thead>
@@ -1220,6 +1222,50 @@
   </div>
 
   <!-- APP INSTALL & PLAY STORE DOWNLOAD MODAL -->
+  <!-- Edit WhatsApp Result Delivery Modal (Admin) -->
+  <div id="editWhatsappModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this) App.closeModals()">
+    <div class="modal-card" style="max-width:480px; width:92%; background:#fff; border-radius:16px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; color:#0f172a; display:flex; align-items:center; gap:8px;">
+          <span>📲</span> Edit WhatsApp Result Delivery
+        </h3>
+        <button class="btn btn-outline" style="padding:4px 8px; font-size:16px; line-height:1;" onclick="App.closeModals()">✕</button>
+      </div>
+
+      <input type="hidden" id="editWhatsappBookingId" />
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px;">
+        <div id="editWhatsappTargetInfo" style="font-weight:700; color:#1e293b;">Booking Ref: #MLB-2026-XXXX</div>
+        <div id="editWhatsappPatientPhone" style="color:#64748b; margin-top:4px;">Patient: John Doe | 📞 9876543210</div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:6px;">
+          Expected WhatsApp Result Date:
+        </label>
+        <input type="date" id="inputWhatsappDate" class="form-control" style="width:100%; padding:10px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:14px;" />
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" style="font-size:11.5px; padding:5px 10px; border-color:#86efac; color:#15803d; font-weight:700;" onclick="App.quickSetWhatsappDate('today')">⚡ Today Evening</button>
+        <button type="button" class="btn btn-outline" style="font-size:11.5px; padding:5px 10px; border-color:#7dd3fc; color:#0284c7; font-weight:700;" onclick="App.quickSetWhatsappDate('tomorrow')">🚀 Soon (Tomorrow)</button>
+        <button type="button" class="btn btn-outline" style="font-size:11.5px; padding:5px 10px; border-color:#cbd5e1; color:#475569; font-weight:700;" onclick="App.quickSetWhatsappDate('5days')">📅 Standard (5 Days)</button>
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px;">
+        <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:6px;">
+          WhatsApp Status Note (Customer will see this):
+        </label>
+        <input type="text" id="inputWhatsappNote" class="form-control" style="width:100%; padding:10px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13.5px;" placeholder="e.g. Result will come in WhatsApp soon!" />
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-outline" onclick="App.closeModals()">Cancel</button>
+        <button type="button" class="btn btn-primary" style="background:#16a34a; border-color:#16a34a; font-weight:700;" onclick="App.saveWhatsappDate()">✓ Save & Update Customer</button>
+      </div>
+    </div>
+  </div>
+
   <div id="installAppModal" class="modal-backdrop" style="display:none;">
     <div class="modal-card" style="max-width:500px; text-align:center;">
       <div class="modal-header" style="justify-content:flex-end;">
@@ -1274,7 +1320,7 @@
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261021-v9"></script>
+  <script src="app.js?v=20261021-v10"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

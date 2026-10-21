@@ -1,4 +1,4 @@
-const CACHE_NAME = "multilab07-v9";
+const CACHE_NAME = "multilab07-v10";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

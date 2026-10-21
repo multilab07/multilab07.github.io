@@ -843,10 +843,16 @@ def collector_update_status(booking_id):
     collector_id = int(request.claims["sub"])
 
     valid_transitions = {
-        "Assigned": {"Accepted", "Cancelled"},
+        "Assigned": {"Accepted", "On the Way", "Cancelled"},
+        "CONFIRMED": {"Accepted", "On the Way", "Cancelled"},
+        "Booked": {"Accepted", "On the Way", "Cancelled"},
         "Accepted": {"On the Way", "Cancelled"},
         "On the Way": {"Arrived", "Cancelled"},
-        "Arrived": {"Sample Collected", "Cancelled"}
+        "Arrived": {"Sample Collected", "Blood Collected", "Cancelled"},
+        "Sample Collected": {"Cash Collected", "Gave to Lab", "Delivered to Lab", "Cancelled"},
+        "Blood Collected": {"Cash Collected", "Gave to Lab", "Delivered to Lab", "Cancelled"},
+        "Cash Collected": {"Gave to Lab", "Delivered to Lab", "Cancelled"},
+        "Gave to Lab": set()
     }
 
     with connect() as conn:
@@ -1414,3 +1420,58 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"Starting MultiLab Server on http://0.0.0.0:{port} (Accessible locally and on Wi-Fi)...")
     app.run(host="0.0.0.0", port=port, debug=False)
+
+@app.post("/api/collector/bookings/<int:booking_id>/collect-cash")
+@require_role("collector")
+def collector_collect_cash(booking_id):
+    collector_id = int(request.claims["sub"])
+    with connect() as conn:
+        booking = conn.execute("SELECT id, final_amount_snapshot, booking_reference FROM bookings WHERE id=?", (booking_id,)).fetchone()
+        if not booking:
+            return jsonify({"error": "Booking not found."}), 404
+
+        conn.execute("""
+            UPDATE bookings SET
+            payment_status='paid',
+            collection_status='Cash Collected',
+            status='Cash Collected',
+            payment_method='cash',
+            payment_method_detail='cash_on_arrival'
+            WHERE id=?
+        """, (booking_id,))
+
+    log_booking_event(booking_id, collector_id, "cash_collected", f"Phlebotomist collected cash at doorstep for booking {booking['booking_reference']}.")
+    return jsonify({
+        "message": f"Cash payment of ₹{booking['final_amount_snapshot']:.2f} collected and marked as PAID.",
+        "booking_id": booking_id,
+        "payment_status": "paid",
+        "collection_status": "Cash Collected"
+    })
+
+@app.patch("/api/admin/bookings/<int:booking_id>/whatsapp-date")
+@require_role("admin")
+def admin_update_whatsapp_date(booking_id):
+    data = request.get_json(silent=True) or {}
+    w_date = str(data.get("whatsapp_delivery_date", "")).strip()
+    w_note = str(data.get("whatsapp_note", "")).strip()
+    admin_id = int(request.claims["sub"])
+
+    with connect() as conn:
+        booking = conn.execute("SELECT id, booking_reference FROM bookings WHERE id=?", (booking_id,)).fetchone()
+        if not booking:
+            return jsonify({"error": "Booking not found."}), 404
+
+        conn.execute("""
+            UPDATE bookings SET
+            whatsapp_delivery_date=?,
+            whatsapp_note=?
+            WHERE id=?
+        """, (w_date, w_note, booking_id))
+
+    log_booking_event(booking_id, admin_id, "whatsapp_date_updated", f"Admin updated WhatsApp result date to {w_date} ({w_note}).")
+    return jsonify({
+        "message": f"WhatsApp result delivery date updated to {w_date}.",
+        "booking_id": booking_id,
+        "whatsapp_delivery_date": w_date,
+        "whatsapp_note": w_note
+    })
