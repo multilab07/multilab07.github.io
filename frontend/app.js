@@ -494,50 +494,100 @@ const App = (function () {
     } catch (e) {}
   }
 
+  function normalizeBooking(b) {
+    if (!b || typeof b !== "object") return b;
+    const rawAmt = b.payable_amount !== undefined ? b.payable_amount : (b.final_amount_snapshot !== undefined ? b.final_amount_snapshot : (b.total_amount !== undefined ? b.total_amount : (b.amount !== undefined ? b.amount : 499)));
+    const amt = typeof rawAmt === "number" ? rawAmt : (parseFloat(rawAmt) || 499);
+    const code = b.booking_code || b.booking_reference || ("MLB-2026-" + (b.id || 101));
+    const compName = b.company_name || b.company_name_snapshot || "Apollo Diagnostics";
+    const testName = b.test_name || b.test_name_snapshot || "Complete Blood Count (CBC) with ESR";
+    const patientName = b.patient_name || (currentUser ? currentUser.display_name : "Valued Customer");
+    const phone = b.patient_phone || b.phone || "+91 91765 67337";
+    const dateStr = b.scheduled_date || b.appointment_date || new Date().toISOString().split("T")[0];
+    const slotStr = b.time_slot || b.appointment_slot || "08:00 AM - 10:00 AM";
+    const addrStr = b.address || b.collection_address || "Pallikaranai to Tambaram Service Zone, Chennai";
+    const pStatus = (b.payment_status || "unpaid").toLowerCase();
+    const cStatus = b.status || b.collection_status || "CONFIRMED";
+
+    return {
+      ...b,
+      id: b.id || Date.now(),
+      booking_code: code,
+      booking_reference: b.booking_reference || code,
+      invoice_id: b.invoice_id || ("INV-" + code),
+      test_name: testName,
+      test_name_snapshot: b.test_name_snapshot || testName,
+      sample_type_snapshot: b.sample_type_snapshot || b.sample_type || "EDTA Whole Blood",
+      company_name: compName,
+      company_name_snapshot: b.company_name_snapshot || compName,
+      patient_name: patientName,
+      patient_phone: phone,
+      phone: phone,
+      scheduled_date: dateStr,
+      appointment_date: dateStr,
+      time_slot: slotStr,
+      appointment_slot: slotStr,
+      address: addrStr,
+      collection_address: addrStr,
+      status: cStatus,
+      collection_status: cStatus,
+      payment_status: pStatus,
+      payment_method: b.payment_method || (pStatus === "pending_collection" ? "cash" : "upi"),
+      payment_method_detail: b.payment_method_detail || (pStatus === "pending_collection" ? "cash_on_arrival" : "upi_online"),
+      total_amount: amt,
+      payable_amount: amt,
+      final_amount_snapshot: amt,
+      created_at: b.created_at || new Date().toISOString()
+    };
+  }
+
   function getStoredBookings() {
     try {
       const data = localStorage.getItem(MOCK_STORAGE_BOOKINGS);
-      if (data) return JSON.parse(data);
+      if (data) {
+        const list = JSON.parse(data);
+        if (Array.isArray(list) && list.length > 0) {
+          return list.map(normalizeBooking);
+        }
+      }
     } catch (e) {}
     const defaults = [
-      {
+      normalizeBooking({
         id: 101,
         booking_code: "MLB-2026-8812",
         test_name: "Complete Blood Count (CBC) with ESR",
-        company_name: "MultiLab07 Flagship Hub",
+        company_name: "Apollo Diagnostics",
         patient_name: "Balu Sakthikumaran",
-        patient_phone: "9876543210",
+        patient_phone: "+91 91765 67337",
         collector_name: "Rahul Phlebotomist",
         collector_id: 2,
         scheduled_date: new Date().toISOString().split("T")[0],
         time_slot: "08:00 AM - 10:00 AM",
-        address: "7th Cross, Anna Nagar, Chennai",
+        address: "Pallikaranai to Tambaram Service Zone, Chennai",
         status: "CONFIRMED",
-        payment_status: "PAID",
+        payment_status: "paid",
         payment_method: "UPI",
-        total_amount: 299,
-        created_at: new Date().toISOString()
-      },
-      {
+        total_amount: 299
+      }),
+      normalizeBooking({
         id: 102,
         booking_code: "MLB-2026-9045",
         test_name: "MultiLab07 Executive Platinum Health Check (84 Tests)",
-        company_name: "MultiLab07 Flagship Hub",
+        company_name: "PathCare Diagnostics",
         patient_name: "Priya Sharma",
-        patient_phone: "98401 55555",
+        patient_phone: "+91 91507 23872",
         collector_name: "Rahul Phlebotomist",
         collector_id: 2,
         scheduled_date: new Date().toISOString().split("T")[0],
         time_slot: "07:00 AM - 09:00 AM",
-        address: "Flat 4B, Emerald Residency, T. Nagar, Chennai",
+        address: "Velachery Main Rd, Pallikaranai, Chennai",
         status: "CONFIRMED",
-        payment_status: "PENDING_VERIFICATION",
+        payment_status: "pending",
         payment_method: "UPI",
-        total_amount: 1499,
-        created_at: new Date().toISOString()
-      }
+        total_amount: 1499
+      })
     ];
-    localStorage.setItem(MOCK_STORAGE_BOOKINGS, JSON.stringify(defaults));
+    saveStoredBookings(defaults);
     return defaults;
   }
 
@@ -836,34 +886,146 @@ const App = (function () {
       const bookings = getStoredBookings();
       const code = "MLB-2026-" + Math.floor(1000 + Math.random() * 9000);
       const testNamesList = Array.isArray(body.test_names) ? body.test_names : [body.test_name || "Diagnostic Panel"];
-      const newB = {
+      const amt = Number(body.total_amount || 499);
+      const newB = normalizeBooking({
         id: Date.now(),
         booking_code: code,
+        booking_reference: code,
         test_name: body.test_name || testNamesList.join(" + "),
         test_names: testNamesList,
+        test_name_snapshot: body.test_name || testNamesList.join(" + "),
         test_count: testNamesList.length,
         company_name: body.company_name || "Apollo Diagnostics",
+        company_name_snapshot: body.company_name || "Apollo Diagnostics",
+        sample_type_snapshot: "EDTA Whole Blood",
         patient_name: body.patient_name || (currentUser ? currentUser.display_name : "Valued Customer"),
-        patient_phone: body.patient_phone || body.phone || "9876543210",
+        patient_phone: body.patient_phone || body.phone || "+91 91765 67337",
+        phone: body.patient_phone || body.phone || "+91 91765 67337",
         scheduled_date: body.scheduled_date || body.appointment_date || new Date().toISOString().split("T")[0],
+        appointment_date: body.scheduled_date || body.appointment_date || new Date().toISOString().split("T")[0],
         time_slot: body.time_slot || body.appointment_slot || "Morning 07:00 AM - 09:00 AM",
-        address: body.address || body.collection_address || "Patient Residence Address",
+        appointment_slot: body.time_slot || body.appointment_slot || "Morning 07:00 AM - 09:00 AM",
+        address: body.address || body.collection_address || "Pallikaranai to Tambaram Service Zone, Chennai",
+        collection_address: body.address || body.collection_address || "Pallikaranai to Tambaram Service Zone, Chennai",
         status: "CONFIRMED",
-        payment_status: "PENDING_VERIFICATION",
+        collection_status: "CONFIRMED",
+        payment_status: "unpaid",
         payment_method: body.payment_method || "UPI",
-        total_amount: body.total_amount || 499,
+        total_amount: amt,
+        payable_amount: amt,
+        final_amount_snapshot: amt,
         created_at: new Date().toISOString()
-      };
+      });
       bookings.unshift(newB);
       saveStoredBookings(bookings);
-      return { booking: newB, tracking_id: code, booking_reference: code, message: "Booking confirmed successfully!" };
+      return {
+        booking: newB,
+        booking_id: newB.id,
+        tracking_id: code,
+        booking_reference: code,
+        payable_amount: amt,
+        message: "Booking confirmed successfully!"
+      };
+    }
+
+    // Payment details endpoint for payment modal
+    if (endpoint.includes("/payment-details") && method === "GET") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = (bookingId ? bookings.find((x) => x.id === bookingId) : null) || bookings[0] || {};
+      const amt = Number(b.payable_amount ?? b.final_amount_snapshot ?? b.total_amount ?? 499);
+      const bookingRef = b.booking_reference || b.booking_code || ("MLB-2026-" + (b.id || bookingId || 101));
+      const compName = b.company_name_snapshot || b.company_name || "Apollo Diagnostics";
+      const upiId = "apollodiaggowri@gmail.com";
+      const payeeName = `MultiLab07 ${compName}`;
+      const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${amt.toFixed(2)}&cu=INR&tn=Booking%20${encodeURIComponent(bookingRef)}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
+
+      return {
+        booking_id: b.id || bookingId,
+        booking_reference: bookingRef,
+        invoice_id: b.invoice_id || ("INV-" + bookingRef),
+        patient_name: b.patient_name || (currentUser ? currentUser.display_name : "Customer"),
+        payable_amount: amt,
+        total_amount: amt,
+        final_amount_snapshot: amt,
+        upi_id: upiId,
+        payee_name: payeeName,
+        upi_uri: upiUri,
+        qr_code_image: qrUrl,
+        payment_status: (b.payment_status || "unpaid").toLowerCase(),
+        transaction_reference: b.transaction_reference || ""
+      };
+    }
+
+    // Submit payment (Cash on Arrival or UPI Online)
+    if (endpoint.includes("/submit-payment") && method === "POST") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b) throw new Error("Booking not found.");
+
+      const methodDetail = body.payment_method_detail || (body.payment_method === "cash" ? "cash_on_arrival" : "upi_online");
+      if (methodDetail === "cash_on_arrival") {
+        b.payment_status = "pending_collection";
+        b.payment_method = "cash";
+        b.payment_method_detail = "cash_on_arrival";
+        b.transaction_reference = "";
+        b.payment_receipt_data = "";
+        saveStoredBookings(bookings);
+        return {
+          success: true,
+          message: "Cash on Arrival confirmed. Phlebotomist will collect cash payment at your doorstep (Pallikaranai to Tambaram).",
+          booking_id: bookingId,
+          payment_status: "pending_collection",
+          payment_method_detail: "cash_on_arrival"
+        };
+      } else {
+        b.payment_status = "pending";
+        b.payment_method = "upi";
+        b.payment_method_detail = "upi_online";
+        b.transaction_reference = body.transaction_reference || "";
+        b.payment_receipt_data = body.receipt_image || "";
+        saveStoredBookings(bookings);
+        return {
+          success: true,
+          message: "Payment receipt submitted successfully! Awaiting Admin verification.",
+          booking_id: bookingId,
+          payment_status: "pending",
+          payment_method_detail: "upi_online"
+        };
+      }
+    }
+
+    // Admin verify payment (Approve / Reject)
+    if (endpoint.includes("/verify-payment") && method === "POST") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      const bookings = getStoredBookings();
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b) throw new Error("Booking not found.");
+
+      if (body.action === "approve") {
+        b.payment_status = "paid";
+        saveStoredBookings(bookings);
+        return { success: true, message: `Payment for booking ${b.booking_reference || b.booking_code} marked as PAID.` };
+      } else {
+        b.payment_status = "rejected";
+        saveStoredBookings(bookings);
+        return { success: true, message: `Payment for booking ${b.booking_reference || b.booking_code} has been rejected.` };
+      }
     }
 
     if (endpoint.startsWith("/api/customer/bookings")) {
       return getStoredBookings();
     }
 
-    if (endpoint.startsWith("/api/admin/bookings") || endpoint.startsWith("/api/admin/assignments")) {
+    if (endpoint.startsWith("/api/admin/bookings") || endpoint.startsWith("/api/admin/assignments") || endpoint.startsWith("/api/admin/payments")) {
       if (method === "POST" && endpoint.includes("/assign")) {
         const bId = parseInt(endpoint.split("/")[4]);
         const bookings = getStoredBookings();
@@ -874,22 +1036,9 @@ const App = (function () {
           targetB.collector_name = col.display_name;
           targetB.collector_id = col.id;
           targetB.status = "ASSIGNED";
+          targetB.collection_status = "ASSIGNED";
           saveStoredBookings(bookings);
           return { success: true, message: `Successfully assigned to ${col.display_name}` };
-        }
-      }
-      return getStoredBookings();
-    }
-
-    if (endpoint.startsWith("/api/admin/payments")) {
-      if (method === "POST" && endpoint.includes("/verify")) {
-        const bId = parseInt(endpoint.split("/")[4]);
-        const bookings = getStoredBookings();
-        const targetB = bookings.find((b) => b.id === bId);
-        if (targetB) {
-          targetB.payment_status = "PAID";
-          saveStoredBookings(bookings);
-          return { success: true, message: "Payment verified successfully." };
         }
       }
       return getStoredBookings();
@@ -1763,42 +1912,91 @@ const App = (function () {
   async function openPaymentModal(bookingId) {
     try {
       const details = await api(`/api/bookings/${bookingId}/payment-details`);
+      if (!details) {
+        showToast("Unable to load payment details.");
+        return;
+      }
 
-      if (details.payment_status === "paid") { showToast("This booking has already been paid."); return; }
-      if (details.payment_status === "pending") { showToast("Payment already submitted — awaiting Admin verification."); return; }
-      if (details.payment_status === "pending_collection") { showToast("Cash on Arrival already confirmed — collector will collect payment at your doorstep."); return; }
+      const pStatus = (details.payment_status || "").toLowerCase();
+      if (pStatus === "paid") { showToast("This booking has already been paid."); return; }
+      if (pStatus === "pending") { showToast("Payment already submitted — awaiting Admin verification."); return; }
+      if (pStatus === "pending_collection") { showToast("Cash on Arrival already confirmed — collector will collect payment at your doorstep."); return; }
 
-      document.getElementById("paymentBookingId").value = details.booking_id;
-      document.getElementById("paymentAmountDisplay").textContent = `₹${details.payable_amount.toFixed(2)}`;
-      document.getElementById("paymentBookingRefDisplay").textContent = `Booking Ref: ${details.booking_reference}`;
-      document.getElementById("cashAmountLabel").textContent = `₹${details.payable_amount.toFixed(2)}`;
-      document.getElementById("paymentQrImage").src = details.qr_code_image;
-      document.getElementById("paymentUpiIdDisplay").textContent = details.upi_id;
-      document.getElementById("upiAmountInline").textContent = `₹${details.payable_amount.toFixed(2)}`;
-      document.getElementById("paymentUtrInput").value = "";
-      document.getElementById("paymentReceiptFile").value = "";
-      document.getElementById("receiptPreviewWrap").style.display = "none";
-      document.getElementById("receiptPreviewImg").src = "";
-      document.getElementById("cashSection").style.display = "none";
-      document.getElementById("upiSection").style.display = "none";
-      document.getElementById("paymentMethodCards").style.display = "flex";
-      document.getElementById("btnMethodCash").style.cssText = "flex:1;padding:18px 10px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .2s;";
-      document.getElementById("btnMethodOnline").style.cssText = "flex:1;padding:18px 10px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .2s;";
+      const rawAmt = details.payable_amount !== undefined ? details.payable_amount : (details.total_amount !== undefined ? details.total_amount : (details.final_amount_snapshot !== undefined ? details.final_amount_snapshot : (details.amount !== undefined ? details.amount : 0)));
+      const payableAmount = typeof rawAmt === "number" ? rawAmt : parseFloat(rawAmt || 0);
+      const safeAmount = isNaN(payableAmount) ? 0 : payableAmount;
+      const formattedAmount = `₹${safeAmount.toFixed(2)}`;
+      const bRef = details.booking_reference || details.booking_code || `MLB-${bookingId}`;
+      const upiId = details.upi_id || "apollodiaggowri@gmail.com";
 
-      document.getElementById("paymentReceiptFile").onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-          document.getElementById("receiptPreviewImg").src = ev.target.result;
-          document.getElementById("receiptPreviewWrap").style.display = "block";
+      const bIdEl = document.getElementById("paymentBookingId");
+      if (bIdEl) bIdEl.value = details.booking_id || bookingId;
+
+      const amtDisp = document.getElementById("paymentAmountDisplay");
+      if (amtDisp) amtDisp.textContent = formattedAmount;
+
+      const refDisp = document.getElementById("paymentBookingRefDisplay");
+      if (refDisp) refDisp.textContent = `Booking Ref: ${bRef}`;
+
+      const cashLabel = document.getElementById("cashAmountLabel");
+      if (cashLabel) cashLabel.textContent = formattedAmount;
+
+      const qrImg = document.getElementById("paymentQrImage");
+      if (qrImg) {
+        qrImg.src = details.qr_code_image || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi://pay?pa=${encodeURIComponent(upiId)}%26pn=ApolloDiagnostics%26am=${safeAmount.toFixed(2)}%26cu=INR`;
+      }
+
+      const upiIdDisp = document.getElementById("paymentUpiIdDisplay");
+      if (upiIdDisp) upiIdDisp.textContent = upiId;
+
+      const upiAmtInline = document.getElementById("upiAmountInline");
+      if (upiAmtInline) upiAmtInline.textContent = formattedAmount;
+
+      const utrIn = document.getElementById("paymentUtrInput");
+      if (utrIn) utrIn.value = "";
+
+      const receiptFile = document.getElementById("paymentReceiptFile");
+      if (receiptFile) receiptFile.value = "";
+
+      const previewWrap = document.getElementById("receiptPreviewWrap");
+      if (previewWrap) previewWrap.style.display = "none";
+
+      const previewImg = document.getElementById("receiptPreviewImg");
+      if (previewImg) previewImg.src = "";
+
+      const cashSec = document.getElementById("cashSection");
+      if (cashSec) cashSec.style.display = "none";
+
+      const upiSec = document.getElementById("upiSection");
+      if (upiSec) upiSec.style.display = "none";
+
+      const methodCards = document.getElementById("paymentMethodCards");
+      if (methodCards) methodCards.style.display = "flex";
+
+      const btnCash = document.getElementById("btnMethodCash");
+      if (btnCash) btnCash.style.cssText = "flex:1;padding:18px 10px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .2s;";
+
+      const btnOnline = document.getElementById("btnMethodOnline");
+      if (btnOnline) btnOnline.style.cssText = "flex:1;padding:18px 10px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:center;transition:all .2s;";
+
+      if (receiptFile) {
+        receiptFile.onchange = function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = ev => {
+            if (previewImg) previewImg.src = ev.target.result;
+            if (previewWrap) previewWrap.style.display = "block";
+          };
+          reader.readAsDataURL(file);
         };
-        reader.readAsDataURL(file);
-      };
+      }
 
-      document.getElementById("paymentModal").style.display = "flex";
+      const payModal = document.getElementById("paymentModal");
+      if (payModal) payModal.style.display = "flex";
     } catch (err) {
-      showToast(err.message);
+      console.error("openPaymentModal error:", err);
+      showToast(err.message || "Failed to open payment modal.");
     }
   }
 
@@ -1883,14 +2081,25 @@ const App = (function () {
         const isPending = b.payment_status === "pending";
         const tr = document.createElement("tr");
 
+        const rawAmt = b.final_amount_snapshot ?? b.payable_amount ?? b.total_amount ?? b.amount ?? 0;
+        const numAmt = Number(rawAmt) || 0;
+        const bRef = b.booking_reference || b.booking_code || ("MLB-" + b.id);
+        const compName = b.company_name_snapshot || b.company_name || "Apollo Diagnostics";
+        const testName = b.test_name_snapshot || b.test_name || "Diagnostic Panel";
+        const sampleType = b.sample_type_snapshot || b.sample_type || "EDTA Whole Blood";
+        const apptDate = b.appointment_date || b.scheduled_date || "Today";
+        const apptSlot = b.appointment_slot || b.time_slot || "08:00 AM - 10:00 AM";
+        const payStatus = (b.payment_status || "unpaid").toLowerCase();
+        const collStatus = b.collection_status || b.status || "CONFIRMED";
+
         tr.innerHTML = `
-          <td><b>${b.booking_reference}</b></td>
-          <td>${b.company_name_snapshot}</td>
-          <td><b>${b.test_name_snapshot}</b><br/><small style="color:#64748b;">${b.sample_type_snapshot}</small></td>
-          <td>${b.appointment_date}<br/><small style="color:#64748b;">${b.appointment_slot}</small></td>
-          <td><b>₹${b.final_amount_snapshot.toFixed(2)}</b></td>
-          <td><span class="badge badge-${b.payment_status}">${b.payment_status.toUpperCase()}</span></td>
-          <td><span class="badge badge-active">${b.collection_status}</span></td>
+          <td><b>${bRef}</b></td>
+          <td>${compName}</td>
+          <td><b>${testName}</b><br/><small style="color:#64748b;">${sampleType}</small></td>
+          <td>${apptDate}<br/><small style="color:#64748b;">${apptSlot}</small></td>
+          <td><b>₹${numAmt.toFixed(2)}</b></td>
+          <td><span class="badge badge-${payStatus}">${payStatus.toUpperCase()}</span></td>
+          <td><span class="badge badge-active">${collStatus}</span></td>
           <td>
             ${isPaid
               ? `<a href="/api/bookings/${b.id}/receipt.pdf" target="_blank" class="btn btn-outline" style="padding:6px 10px; font-size:12px;">📄 Download PDF</a>`
@@ -2023,15 +2232,21 @@ const App = (function () {
 
         const canVerify = b.payment_status === "pending" || b.payment_status === "pending_collection";
 
+        const rawAmt = b.final_amount_snapshot ?? b.payable_amount ?? b.total_amount ?? b.amount ?? 0;
+        const numAmt = Number(rawAmt) || 0;
+        const bRef = b.booking_reference || b.booking_code || ("MLB-" + b.id);
+        const pName = b.patient_name || "Patient";
+        const payStatus = (b.payment_status || "unpaid").toLowerCase();
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td><b>${b.booking_reference}</b></td>
-          <td>${b.patient_name}</td>
-          <td><b>₹${b.final_amount_snapshot.toFixed(2)}</b></td>
+          <td><b>${bRef}</b></td>
+          <td>${pName}</td>
+          <td><b>₹${numAmt.toFixed(2)}</b></td>
           <td>${methodBadge}</td>
           <td>${utrCell}</td>
           <td>${receiptCell}</td>
-          <td><span class="badge badge-${b.payment_status}">${b.payment_status.replace(/_/g," ").toUpperCase()}</span></td>
+          <td><span class="badge badge-${payStatus}">${payStatus.replace(/_/g," ").toUpperCase()}</span></td>
           <td>
             ${canVerify
               ? `<div style="display:flex;gap:6px;">
@@ -2259,7 +2474,7 @@ const App = (function () {
           <td><code>${t.code}</code></td>
           <td><b>${t.name}</b></td>
           <td>${t.category}</td>
-          <td><b>₹${t.price.toFixed(2)}</b> (Net: ₹${t.final_price.toFixed(2)})</td>
+          <td><b>₹${Number(t.price || 0).toFixed(2)}</b> (Net: ₹${Number(t.final_price || t.price || 0).toFixed(2)})</td>
           <td>${t.discount_percent}%</td>
           <td>${t.sample_type}</td>
           <td><span class="badge badge-${t.is_available ? "paid" : "failed"}">${t.is_available ? "Available" : "Unavailable"}</span></td>
