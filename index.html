@@ -696,27 +696,37 @@
         <button class="tab-btn" id="authTabAdmin" onclick="App.setLoginRole('admin')">Admin</button>
       </div>
 
-      <!-- 1. CUSTOMER LOGIN (BOX 1: USERNAME LOWERCASE, BOX 2: PHONE NUMBER) -->
+      <!-- 1. CUSTOMER LOGIN (PHONE + OTP ONLY) -->
       <div id="customerLoginFormView">
-        <form id="customerPhoneLoginForm" onsubmit="App.handleCustomerLogin(event)">
+        <!-- Step 1: Phone number entry -->
+        <div id="custLoginStep1">
           <div class="form-group">
-            <label class="form-label">Username (lowercase only)</label>
-            <input type="text" id="custLoginUsername" class="form-control" required placeholder="username (lowercase only)" style="text-transform:lowercase;" oninput="this.value = this.value.toLowerCase().trim()" />
-            <span style="font-size:11.5px; color:#64748b; margin-top:3px; display:block;">Enter your username in lowercase (e.g. vithunraj / ramesh)</span>
-          </div>
-
-          <div class="form-group" style="margin-top:14px;">
-            <label class="form-label">Phone Number</label>
+            <label class="form-label" style="font-weight:700; font-size:14px;">Mobile Number</label>
             <div class="input-group">
               <span style="background:#f1f5f9; padding:8px 12px; border:1px solid #cbd5e1; border-right:none; border-radius:6px 0 0 6px; font-weight:700; font-size:13px; color:#475569; display:flex; align-items:center;">+91</span>
-              <input type="tel" id="custLoginPhone" class="form-control" style="border-radius:0 6px 6px 0;" maxlength="10" required placeholder="10-digit mobile number (e.g. 91765 67337)" />
+              <input type="tel" id="custLoginPhone" class="form-control" style="border-radius:0 6px 6px 0;" maxlength="10" placeholder="10-digit mobile number" inputmode="numeric" pattern="[0-9]{10}" />
             </div>
+            <span style="font-size:11.5px; color:#64748b; margin-top:4px; display:block;">We will send a 6-digit OTP to verify your number.</span>
           </div>
-
-          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:18px; padding:12px; font-size:14.5px; font-weight:800;">
-            Sign in as Customer
+          <button type="button" onclick="App.sendLoginOtp()" class="btn btn-primary" style="width:100%; margin-top:16px; padding:12px; font-size:14.5px; font-weight:800;">
+            Send OTP
           </button>
-        </form>
+        </div>
+
+        <!-- Step 2: OTP verification (hidden initially) -->
+        <div id="custLoginStep2" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:700; font-size:14px;">Enter OTP</label>
+            <input type="text" id="custLoginOtp" class="form-control" maxlength="6" placeholder="6-digit OTP code" inputmode="numeric" pattern="[0-9]{6}" style="letter-spacing:6px; font-size:20px; font-weight:700; text-align:center;" />
+            <small id="custLoginOtpHint" style="color:var(--primary); font-weight:600; display:block; margin-top:6px;"></small>
+          </div>
+          <button type="button" onclick="App.verifyLoginOtp()" class="btn btn-primary" style="width:100%; margin-top:14px; padding:12px; font-size:14.5px; font-weight:800;">
+            Verify and Sign In
+          </button>
+          <button type="button" onclick="App.backToPhoneEntry()" class="btn btn-outline" style="width:100%; margin-top:8px; padding:10px; font-size:13px;">
+            Change Number
+          </button>
+        </div>
       </div>
 
       <!-- 2. COLLECTOR BOY LOGIN (BOX 1: USERNAME, BOX 2: PASSWORD) -->
@@ -763,6 +773,40 @@
         </form>
       </div>
 
+    </div>
+  </div>
+
+
+  <!-- FEEDBACK MODAL (shown after blood collection) -->
+  <div id="feedbackModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:420px;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">
+        <h2 style="color:#fff; margin:0; font-size:18px;">Rate Your Experience</h2>
+        <button onclick="App.closeFeedbackModal()" style="background:transparent; border:none; color:#fff; font-size:22px; cursor:pointer; padding:0 4px;">x</button>
+      </div>
+      <div style="padding:24px 20px;">
+        <p style="color:#475569; font-size:14px; margin-bottom:16px;">Our collector boy completed your blood sample collection. Please share your feedback — it helps us improve!</p>
+        <div style="margin-bottom:18px; text-align:center;">
+          <label style="font-weight:700; font-size:14px; color:#0f172a; display:block; margin-bottom:10px;">Rate your experience:</label>
+          <div id="starRatingContainer" style="display:flex; gap:10px; justify-content:center;">
+            <span class="star-btn" data-rating="1" onclick="App.setFeedbackRating(1)" style="font-size:36px; cursor:pointer; transition:transform 0.15s; color:#cbd5e1;">&#9733;</span>
+            <span class="star-btn" data-rating="2" onclick="App.setFeedbackRating(2)" style="font-size:36px; cursor:pointer; transition:transform 0.15s; color:#cbd5e1;">&#9733;</span>
+            <span class="star-btn" data-rating="3" onclick="App.setFeedbackRating(3)" style="font-size:36px; cursor:pointer; transition:transform 0.15s; color:#cbd5e1;">&#9733;</span>
+            <span class="star-btn" data-rating="4" onclick="App.setFeedbackRating(4)" style="font-size:36px; cursor:pointer; transition:transform 0.15s; color:#cbd5e1;">&#9733;</span>
+            <span class="star-btn" data-rating="5" onclick="App.setFeedbackRating(5)" style="font-size:36px; cursor:pointer; transition:transform 0.15s; color:#cbd5e1;">&#9733;</span>
+          </div>
+          <p id="ratingLabel" style="color:#7c3aed; font-weight:700; font-size:14px; margin-top:8px; min-height:20px;"></p>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label">Comments (optional)</label>
+          <textarea id="feedbackComment" rows="3" class="form-control" placeholder="Tell us about your experience with our collector boy..." style="resize:vertical;"></textarea>
+        </div>
+        <input type="hidden" id="feedbackBookingId" value="" />
+        <input type="hidden" id="feedbackRatingValue" value="0" />
+        <button onclick="App.submitFeedback()" class="btn btn-primary" style="width:100%; padding:12px; font-size:15px; font-weight:800;">
+          Submit Feedback
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1320,7 +1364,7 @@
 
   <!-- Leaflet JS for live map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=20261021-v10"></script>
+  <script src="app.js?v=20261030-v11"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

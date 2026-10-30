@@ -1137,6 +1137,20 @@ const App = (function () {
       }
     }
 
+    // Customer feedback submission
+    if (endpoint.includes("/feedback") && method === "POST") {
+      const parts = endpoint.split("/");
+      const bIndex = parts.indexOf("bookings");
+      const bookingId = bIndex !== -1 ? parseInt(parts[bIndex + 1]) : 0;
+      localStorage.setItem("mlb_feedback_" + bookingId, JSON.stringify({
+        booking_id: bookingId,
+        rating: body.rating,
+        comment: body.comment,
+        submitted_at: new Date().toISOString()
+      }));
+      return { success: true, message: "Feedback submitted successfully! Thank you." };
+    }
+
     if (endpoint.startsWith("/api/help/")) {
       const role = endpoint.split("/").pop();
       if (role === "admin") {
@@ -1281,38 +1295,87 @@ const App = (function () {
     }
   }
 
-  function handleCustomerLogin(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    const uInput = document.getElementById("custLoginUsername");
-    const pInput = document.getElementById("custLoginPhone");
-    const username = (uInput ? uInput.value : "").trim().toLowerCase();
-    const phone = (pInput ? pInput.value : "").trim().replace(/\D/g, "");
-
-    if (!username) {
-      showToast("Please enter your username in lowercase.");
-      if (uInput) uInput.focus();
-      return;
-    }
+  // Customer login step 1: send OTP to phone
+  async function sendLoginOtp() {
+    const phoneEl = document.getElementById("custLoginPhone");
+    const phone = (phoneEl ? phoneEl.value : "").trim().replace(/\D/g, "");
     if (!phone || phone.length < 10) {
       showToast("Please enter a valid 10-digit mobile number.");
-      if (pInput) pInput.focus();
+      if (phoneEl) phoneEl.focus();
       return;
     }
+    try {
+      const res = await api("/api/auth/otp/send", {
+        method: "POST",
+        body: JSON.stringify({ phone: phone, purpose: "login" })
+      });
+      // Show step 2 (OTP entry)
+      document.getElementById("custLoginStep1").style.display = "none";
+      document.getElementById("custLoginStep2").style.display = "block";
+      const hint = document.getElementById("custLoginOtpHint");
+      if (hint) hint.textContent = "OTP sent to +91-" + phone + ". Test OTP: " + res.dev_otp;
+      const otpEl = document.getElementById("custLoginOtp");
+      if (otpEl) { otpEl.value = res.dev_otp || ""; otpEl.focus(); }
+      showToast(res.message || "OTP sent!");
+    } catch (err) {
+      showToast(err.message || "Failed to send OTP. Please try again.");
+    }
+  }
 
-    token = "mlb_jwt_cust_" + Date.now();
-    currentUser = {
-      role: "customer",
-      username: username,
-      display_name: username.charAt(0).toUpperCase() + username.slice(1),
-      phone: phone
-    };
-    localStorage.setItem("bloodlab_token", token);
-    localStorage.setItem("bloodlab_user", JSON.stringify(currentUser));
+  // Customer login step 2: verify OTP and sign in
+  async function verifyLoginOtp() {
+    const phoneEl = document.getElementById("custLoginPhone");
+    const phone = (phoneEl ? phoneEl.value : "").trim().replace(/\D/g, "");
+    const otpEl = document.getElementById("custLoginOtp");
+    const otp = (otpEl ? otpEl.value : "").trim();
 
-    closeModals();
-    showToast(`Welcome, ${currentUser.display_name}! Signed in as Customer.`);
-    updateAuthUI();
-    switchRoleView("customer");
+    if (!otp || otp.length < 4) {
+      showToast("Please enter the OTP code.");
+      if (otpEl) otpEl.focus();
+      return;
+    }
+    try {
+      const res = await api("/api/auth/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ phone: phone, otp_code: otp })
+      });
+      token = res.access_token || res.token || ("mlb_jwt_cust_" + Date.now());
+      currentUser = {
+        role: "customer",
+        username: res.username || ("user_" + phone.slice(-4)),
+        display_name: res.display_name || ("Customer " + phone.slice(-4)),
+        phone: phone
+      };
+      localStorage.setItem("bloodlab_token", token);
+      localStorage.setItem("bloodlab_user", JSON.stringify(currentUser));
+      closeModals();
+      showToast("Welcome! Signed in as Customer.");
+      updateAuthUI();
+      switchRoleView("customer");
+    } catch (err) {
+      showToast(err.message || "Invalid OTP. Please try again.");
+    }
+  }
+
+  // Go back to phone entry (reset OTP step)
+  function backToPhoneEntry() {
+    document.getElementById("custLoginStep1").style.display = "block";
+    document.getElementById("custLoginStep2").style.display = "none";
+    const otpEl = document.getElementById("custLoginOtp");
+    if (otpEl) otpEl.value = "";
+    const hint = document.getElementById("custLoginOtpHint");
+    if (hint) hint.textContent = "";
+  }
+
+  function handleCustomerLogin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    // Compatibility: if OTP step is visible, verify; else send OTP
+    const step2 = document.getElementById("custLoginStep2");
+    if (step2 && step2.style.display !== "none") {
+      verifyLoginOtp();
+    } else {
+      sendLoginOtp();
+    }
   }
 
   async function handleCollectorLogin(e) {
@@ -3046,6 +3109,12 @@ const App = (function () {
         stopCollectorGps();
       }
 
+      // When blood is collected, remove any previously-done feedback flag
+      // so the customer will be prompted for feedback on next view
+      if (status === "Blood Collected" || status === "Sample Collected") {
+        localStorage.removeItem("mlb_feedback_done_" + bookingId);
+      }
+
       loadCollectorAssignments();
     } catch (err) {
       showToast(err.message);
@@ -3143,6 +3212,85 @@ const App = (function () {
     if (el) el.type = el.type === "password" ? "text" : "password";
   }
 
+
+  // ---- FEEDBACK FORM (shown to customer after blood collection) ----
+  let currentFeedbackRating = 0;
+
+  function showFeedbackModal(bookingId) {
+    currentFeedbackRating = 0;
+    document.getElementById("feedbackBookingId").value = bookingId;
+    document.getElementById("feedbackRatingValue").value = 0;
+    document.getElementById("feedbackComment").value = "";
+    document.getElementById("ratingLabel").textContent = "";
+    // Reset stars
+    document.querySelectorAll(".star-btn").forEach(function(s) {
+      s.style.color = "#cbd5e1";
+      s.style.transform = "scale(1)";
+    });
+    document.getElementById("feedbackModal").style.display = "flex";
+  }
+
+  function closeFeedbackModal() {
+    document.getElementById("feedbackModal").style.display = "none";
+  }
+
+  function setFeedbackRating(rating) {
+    currentFeedbackRating = rating;
+    document.getElementById("feedbackRatingValue").value = rating;
+    var labels = ["", "Poor", "Fair", "Good", "Great", "Excellent!"];
+    document.getElementById("ratingLabel").textContent = labels[rating] || "";
+    document.querySelectorAll(".star-btn").forEach(function(s) {
+      var r = parseInt(s.getAttribute("data-rating"));
+      s.style.color = r <= rating ? "#f59e0b" : "#cbd5e1";
+      s.style.transform = r <= rating ? "scale(1.15)" : "scale(1)";
+    });
+  }
+
+  async function submitFeedback() {
+    const bookingId = document.getElementById("feedbackBookingId").value;
+    const rating = currentFeedbackRating;
+    const comment = document.getElementById("feedbackComment").value.trim();
+
+    if (!rating) {
+      showToast("Please select a star rating before submitting.");
+      return;
+    }
+
+    try {
+      await api("/api/bookings/" + bookingId + "/feedback", {
+        method: "POST",
+        body: JSON.stringify({ rating: rating, comment: comment, booking_id: bookingId })
+      });
+      // Mark feedback submitted in localStorage
+      localStorage.setItem("mlb_feedback_done_" + bookingId, "1");
+      closeFeedbackModal();
+      showToast("Thank you for your feedback! We appreciate it.");
+    } catch (err) {
+      showToast(err.message || "Failed to submit feedback.");
+    }
+  }
+
+  // Check bookings and show feedback if blood was collected and feedback not yet submitted
+  function checkPendingFeedback(bookings) {
+    if (!currentUser || currentUser.role !== "customer") return;
+    for (var i = 0; i < bookings.length; i++) {
+      var b = bookings[i];
+      var st = (b.collection_status || b.status || "").toUpperCase();
+      var isCollected = st === "BLOOD COLLECTED" || st === "BLOOD_COLLECTED" ||
+                        st === "SAMPLE COLLECTED" || st === "SAMPLE_COLLECTED" ||
+                        st === "CASH COLLECTED" || st === "GAVE TO LAB";
+      var id = b.id || b.booking_id;
+      var alreadyDone = localStorage.getItem("mlb_feedback_done_" + id);
+      if (isCollected && !alreadyDone) {
+        // Small delay so the bookings view renders first
+        (function(bid) {
+          setTimeout(function() { showFeedbackModal(bid); }, 800);
+        })(id);
+        break; // Show one at a time
+      }
+    }
+  }
+
   // Expose public methods
   return {
     init,
@@ -3216,7 +3364,14 @@ const App = (function () {
     api,
     getStoredStaff,
     getStoredCompanies,
-    getStoredTests
+    getStoredTests,
+    sendLoginOtp,
+    verifyLoginOtp,
+    backToPhoneEntry,
+    showFeedbackModal,
+    closeFeedbackModal,
+    setFeedbackRating,
+    submitFeedback
   };
 })();
 
